@@ -9,6 +9,38 @@ const DIF = { facil: "Fácil", normal: "Normal", dificil: "Difícil" };
 const mmss = (s) => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
 const num = (v) => { const n = parseFloat(String(v).replace(",", ".")); return isFinite(n) ? n : 0; };
 const fmtKg = (n) => (Math.round(n * 10) / 10).toString().replace(".", ",");
+// --- Tipos de carga ---
+const MANC = [1, 2, 2.5, 5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30, 32.5, 35, 37.5, 40];
+const tipoPeso = (id) => EJ[id]?.peso || "mancuerna";
+function pasoPeso(id, v, d) {
+  v = +v || 0;
+  const t = tipoPeso(id);
+  if (t === "mancuerna") {
+    if (d > 0) return MANC.find((x) => x > v + 1e-9) ?? v + 2.5;
+    return [...MANC].reverse().find((x) => x < v - 1e-9) ?? 0;
+  }
+  if (t === "discos") return Math.max(0, Math.round((v + d * 2.5) * 10) / 10);
+  if (t === "placas") return Math.max(0, Math.round(v) + d);
+  return 0;
+}
+function txtPeso(id, v) {
+  v = +v || 0;
+  const t = tipoPeso(id);
+  if (t === "discos") return v ? `máquina + ${fmtKg(v)} kg` : "solo máquina";
+  if (t === "placas") return v ? `placa ${fmtKg(v)}` : "sin placa";
+  if (t === "corporal") return "peso corporal";
+  return `${fmtKg(v)} kg`;
+}
+function cortoPeso(id, v) {
+  v = +v || 0;
+  const t = tipoPeso(id);
+  if (t === "discos") return v ? `+${fmtKg(v)} kg` : "máq.";
+  if (t === "placas") return `P${fmtKg(v)}`;
+  if (t === "corporal") return "";
+  return `${fmtKg(v)} kg`;
+}
+const serieTxt = (id, x) => { const p = cortoPeso(id, x.kg); return p ? `${p}×${x.reps}` : `${x.reps} reps`; };
+const ETQ_PESO = { mancuerna: "kg", discos: "+ kg discos", placas: "placa" };
 const SERIE_SEG = 40; // tiempo estimado de trabajo por serie
 // Alternos (1 rep = los dos brazos) y unilaterales (todas las reps con una pierna y luego la otra) duran el doble.
 const segSerie = (e) => SERIE_SEG * (e && EJ[e.id]?.doble ? 2 : 1);
@@ -196,20 +228,20 @@ function vEjercicio(id, sem) {
   const donde = [];
   for (const [k, bl] of Object.entries(BLOQUES)) for (const [s, w] of Object.entries(bl.semanas)) if (w.ej.some((x) => x.id === id)) donde.push(`S${s}`);
   const h = db.historial(id);
-  const filas = h.length ? h.map((r) => `<tr><td>${db.fechaCorta(r.fecha)}<small>S${r.semana}</small></td><td>${r.series.map((x) => `${fmtKg(+x.kg || 0)}×${x.reps}`).join(" · ") || "—"}</td><td>${r.dif ? `<span class="dif ${r.dif}">${DIF[r.dif]}</span>` : ""}</td></tr>`).join("")
+  const filas = h.length ? h.map((r) => `<tr><td>${db.fechaCorta(r.fecha)}<small>S${r.semana}</small></td><td>${r.series.map((x) => serieTxt(id, x)).join(" · ") || "—"}</td><td>${r.dif ? `<span class="dif ${r.dif}">${DIF[r.dif]}</span>` : ""}</td></tr>`).join("")
     : `<tr><td colspan="3" class="suave">Todavía no hay registros.</td></tr>`;
   return `<a class="volver" href="javascript:history.back()">‹ Volver</a>
     <section class="card"><div class="bigfig" data-fig="${id}"></div><h2>${esc(e.nombre)}</h2>
     <div class="pills"><span>${esc(e.zona)}</span><span>${esc(e.equipo)}</span><span>En el plan: ${donde.join(", ")}</span></div>
     ${e.nota ? `<p class="intro">${esc(e.nota)}</p>` : ""}</section>
-    <section class="card"><h3>Historial</h3>${grafica(h)}<table class="thist"><thead><tr><th>Fecha</th><th>kg × reps</th><th></th></tr></thead><tbody>${filas}</tbody></table></section>`;
+    <section class="card"><h3>Historial</h3>${grafica(h, id)}<table class="thist"><thead><tr><th>Fecha</th><th>Peso × reps</th><th></th></tr></thead><tbody>${filas}</tbody></table></section>`;
 }
-function grafica(h) {
+function grafica(h, id) {
   const pts = [...h].reverse().map((r) => db.maxKg(r.series)).filter((x, i, a) => a.length);
   if (pts.length < 2) return "";
   const max = Math.max(...pts, 1), min = Math.min(...pts), W = 300, H = 70, rng = max - min || 1;
   const xy = pts.map((v, i) => [10 + (i * (W - 20)) / (pts.length - 1), H - 10 - ((v - min) / rng) * (H - 22)]);
-  return `<svg viewBox="0 0 ${W} ${H}" class="graf"><polyline points="${xy.map((p) => p.join(",")).join(" ")}"/>${xy.map((p, i) => `<circle cx="${p[0]}" cy="${p[1]}" r="3.5"/>${i === xy.length - 1 ? `<text x="${p[0] - 4}" y="${p[1] - 8}" text-anchor="end">${fmtKg(pts[i])} kg</text>` : ""}`).join("")}</svg>`;
+  return `<svg viewBox="0 0 ${W} ${H}" class="graf"><polyline points="${xy.map((p) => p.join(",")).join(" ")}"/>${xy.map((p, i) => `<circle cx="${p[0]}" cy="${p[1]}" r="3.5"/>${i === xy.length - 1 ? `<text x="${p[0] - 4}" y="${Math.max(13, p[1] - 8)}" text-anchor="end">${esc(cortoPeso(id, pts[i]))}</text>` : ""}`).join("")}</svg>`;
 }
 
 // ---------- PROGRESO ----------
@@ -219,7 +251,7 @@ function vProgreso() {
   const ej = ids.map((id) => ({ id, h: db.historial(id) })).filter((x) => x.h.length).sort((a, b) => (a.h[0].fecha < b.h[0].fecha ? 1 : -1));
   const lista = ej.length ? ej.map(({ id, h }) => {
     const ult = h[0], mejor = Math.max(...h.map((r) => db.maxKg(r.series)));
-    return `<li><a href="#/ej/${id}" class="ejrow"><div class="thumb">${svgEstatico(id)}</div><div><b>${esc(EJ[id].nombre)}</b><span>Última: ${fmtKg(db.maxKg(ult.series))} kg (${db.fechaCorta(ult.fecha)}) · Mejor: ${fmtKg(mejor)} kg</span></div>${ult.dif ? `<span class="dif ${ult.dif}">${DIF[ult.dif]}</span>` : ""}</a></li>`;
+    return `<li><a href="#/ej/${id}" class="ejrow"><div class="thumb">${svgEstatico(id)}</div><div><b>${esc(EJ[id].nombre)}</b><span>Última: ${txtPeso(id, db.maxKg(ult.series))} (${db.fechaCorta(ult.fecha)}) · Mejor: ${txtPeso(id, mejor)}</span></div>${ult.dif ? `<span class="dif ${ult.dif}">${DIF[ult.dif]}</span>` : ""}</a></li>`;
   }).join("") : `<li class="suave vacio">Cuando completes tu primer entreno verás aquí tus pesos y cómo evolucionan.</li>`;
   const hist = ses.slice(0, 30).map((s) => {
     const p = sesionDe(s.dia, s.semana);
@@ -268,12 +300,12 @@ function ultimaVez(id, fechaActual, semana) {
   const h = db.historial(id).filter((r) => r.fecha < fechaActual);
   return { mismaFase: h.find((r) => r.semana === semana), ult: h[0] };
 }
-function consejo(r) {
-  if (!r || !r.dif) return "";
-  const kg = db.maxKg(r.series);
-  if (r.dif === "facil") return `Te resultó fácil: prueba a subir algo de peso (${fmtKg(kg)} → ${fmtKg(kg + (kg >= 10 ? 2 : 1))} kg).`;
-  if (r.dif === "dificil") return `Te costó: mantén ${fmtKg(kg)} kg y cuida la técnica.`;
-  return `Bien: repite ${fmtKg(kg)} kg o sube un poco si te ves con fuerza.`;
+function consejo(r, id) {
+  if (!r || !r.dif || tipoPeso(id) === "corporal") return "";
+  const kg = db.maxKg(r.series), sube = pasoPeso(id, kg, 1);
+  if (r.dif === "facil") return `Te resultó fácil: prueba a subir (${txtPeso(id, kg)} → ${txtPeso(id, sube)}).`;
+  if (r.dif === "dificil") return `Te costó: mantén ${txtPeso(id, kg)} y cuida la técnica.`;
+  return `Bien: repite ${txtPeso(id, kg)} o sube un poco si te ves con fuerza.`;
 }
 
 function vFuerza(s, p) {
@@ -285,11 +317,13 @@ function vFuerza(s, p) {
   if (r.id !== e.id) { r.id = e.id; r.series = []; r.dif = null; }
   const { mismaFase, ult } = ultimaVez(e.id, s.fecha, s.semana);
   const ref = mismaFase || ult;
-  const kgDef = ref ? db.maxKg(ref.series) : 0;
+  // Peso por defecto: el de la última vez que hiciste este ejercicio en la MISMA semana del ciclo (S1 con S1…).
+  const kgDe = (k) => { const sr = mismaFase?.series; if (!sr || !sr.length) return 0; return +(sr[k] || sr[sr.length - 1]).kg || 0; };
   const repsDef = p.vol.repsMax;
-  for (let k = 0; k < p.vol.series; k++) r.series[k] = r.series[k] || { kg: r.series[k - 1]?.kg ?? kgDef, reps: repsDef, hecho: false };
+  for (let k = 0; k < p.vol.series; k++) r.series[k] = r.series[k] || { kg: kgDe(k), reps: repsDef, hecho: false };
   db.guardar();
   const sinPeso = /sin cargar/i.test(e.detalle);
+  const tp = tipoPeso(e.id);
 
   const dots = p.ejercicios.map((x, k) => {
     const rr = s.ej[k], ok = rr && rr.dif;
@@ -297,11 +331,11 @@ function vFuerza(s, p) {
   }).join("");
   const filas = r.series.map((x, k) => `<div class="serie ${x.hecho ? "hecha" : ""}" data-k="${k}">
       <span class="sn">${k + 1}</span>
-      <div class="step"><button data-act="kg" data-k="${k}" data-d="-1">−</button><input inputmode="decimal" data-campo="kg" data-k="${k}" value="${fmtKg(+x.kg || 0)}"><button data-act="kg" data-k="${k}" data-d="1">+</button><small>kg</small></div>
+      ${tp === "corporal" ? `<div class="step corp">Peso corporal</div>` : `<div class="step"><button data-act="kg" data-k="${k}" data-d="-1">−</button><input inputmode="decimal" data-campo="kg" data-k="${k}" value="${fmtKg(+x.kg || 0)}"><button data-act="kg" data-k="${k}" data-d="1">+</button><small>${ETQ_PESO[tp]}</small></div>`}
       <div class="step"><button data-act="reps" data-k="${k}" data-d="-1">−</button><input inputmode="numeric" data-campo="reps" data-k="${k}" value="${x.reps}"><button data-act="reps" data-k="${k}" data-d="1">+</button><small>reps</small></div>
       <button class="check" data-act="serie" data-k="${k}" aria-label="Serie hecha">✓</button></div>`).join("");
   const todas = r.series.every((x) => x.hecho);
-  const ultTxt = ref ? `<div class="ultima"><b>Última vez${mismaFase ? " en esta fase" : ""}:</b> ${ref.series.map((x) => `${fmtKg(+x.kg || 0)} kg×${x.reps}`).join(" · ")}${ref.dif ? ` <span class="dif ${ref.dif}">${DIF[ref.dif]}</span>` : ""}<br><span class="suave">${esc(consejo(ref))}</span></div>` : "";
+  const ultTxt = ref ? `<div class="ultima"><b>Última vez${mismaFase ? ` en la semana ${s.semana}` : ` (semana ${ref.semana})`}:</b> ${ref.series.map((x) => serieTxt(e.id, x)).join(" · ")}${ref.dif ? ` <span class="dif ${ref.dif}">${DIF[ref.dif]}</span>` : ""}<br><span class="suave">${esc(consejo(ref, e.id))}</span></div>` : "";
   const ultimo = i === n - 1;
   const restante = estimarRestante(s, p);
   return `<header class="wbar"><button class="x" data-act="salir" aria-label="Salir">✕</button><div class="wt"><b>${esc(p.subtitulo)}</b><span>Semana ${s.semana} · ${fase(s.semana).nombre}</span></div><div class="reloj"><b data-reloj>${s.inicio ? mmss((Date.now() - s.inicio) / 1000) : "0:00"}</b><span>≈ ${Math.round(restante / 60)} min rest.</span></div></header>
@@ -314,7 +348,7 @@ function vFuerza(s, p) {
       <div class="pauta"><div><b>${p.vol.series}</b><span>series</span></div><div><b>${p.vol.reps}</b><span>${e.doble === "pierna" ? "reps por pierna" : e.doble === "brazo" ? "reps (2 brazos)" : "reps"}</span></div><div><b>${p.vol.descansoTxt || p.vol.descanso + " s"}</b><span>descanso</span></div></div>
       ${ultTxt}
     </section>
-    <section class="card series">${sinPeso ? `<p class="nota">Sin cargar peso: deja 0 kg (peso de la máquina).</p>` : ""}${filas}</section>
+    <section class="card series">${sinPeso ? `<p class="nota">Sin cargar peso: deja 0 discos (solo el peso propio de la máquina).</p>` : tp === "discos" ? `<p class="nota">Apunta los kg de discos que añades; la máquina ya tiene su propio peso.</p>` : tp === "placas" ? `<p class="nota">Apunta el número de placa.</p>` : ""}${filas}</section>
     <section class="card difsel ${todas ? "" : "apagado"}"><h3>¿Cómo te ha resultado?</h3><div class="difs">${Object.entries(DIF).map(([k, t]) => `<button class="dif ${k} ${r.dif === k ? "on" : ""}" data-act="dif" data-v="${k}">${t}</button>`).join("")}</div></section>
     <footer class="wfoot">
       <button class="btn sec" data-act="irEj" data-i="${i - 1}" ${i === 0 ? "disabled" : ""}>‹ Anterior</button>
@@ -334,7 +368,7 @@ function estimarRestante(s, p) {
 }
 function resumenFuerza(s, p) {
   const dur = Math.round((s.fin - (s.inicio || s.fin)) / 60000);
-  const filas = p.ejercicios.map((e, k) => { const r = s.ej[k] || { series: [] }; const ok = (r.series || []).filter((x) => x.hecho); return `<li><b>${esc(e.nombre)}</b><span>${ok.length ? ok.map((x) => `${fmtKg(+x.kg || 0)}×${x.reps}`).join(" · ") : "sin registrar"}</span>${r.dif ? `<span class="dif ${r.dif}">${DIF[r.dif]}</span>` : ""}</li>`; }).join("");
+  const filas = p.ejercicios.map((e, k) => { const r = s.ej[k] || { series: [] }; const ok = (r.series || []).filter((x) => x.hecho); return `<li><b>${esc(e.nombre)}</b><span>${ok.length ? ok.map((x) => serieTxt(e.id, x)).join(" · ") : "sin registrar"}</span>${r.dif ? `<span class="dif ${r.dif}">${DIF[r.dif]}</span>` : ""}</li>`; }).join("");
   return `<section class="card resumen"><h3>✓ Entreno completado · ${dur} min</h3><ul class="lista compacta">${filas}</ul><p class="nota">Puedes corregir cualquier dato tocando el número del ejercicio arriba.</p><a class="btn" href="#/hoy">Volver a Hoy</a></section>`;
 }
 
@@ -429,7 +463,7 @@ function tickDescanso(s, p) {
     const r = s.ej[s.idx ?? 0];
     const k = r ? r.series.findIndex((x) => !x.hecho) : 0;
     const prox = d.tipo === "cambio" ? `<div class="etq">Siguiente ejercicio</div><b>${esc(sigEj.nombre)}</b><div class="mini-fig" data-fig2="${sigEj.id}"></div>`
-      : `<div class="etq">Siguiente</div><b>Serie ${k + 1} de ${p.vol.series}${r && r.series[k] ? ` · ${fmtKg(+r.series[k].kg || 0)} kg` : ""}</b>`;
+      : `<div class="etq">Siguiente</div><b>Serie ${k + 1} de ${p.vol.series}${r && r.series[k] && tipoPeso(r.id) !== "corporal" ? ` · ${txtPeso(r.id, r.series[k].kg)}` : ""}</b>`;
     box.innerHTML = `<div class="dcont"><div class="etq">${d.tipo === "cambio" ? "Cambio de ejercicio" : "Descanso"}</div>
       <div class="anillo"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="fondo"/><circle cx="60" cy="60" r="52" class="prog" data-anillo/></svg><b data-dcuenta></b></div>
       <div class="dbtns"><button class="mini" data-act="dMas" data-d="-15">−15 s</button><button class="mini" data-act="dMas" data-d="15">+15 s</button></div>
@@ -485,7 +519,7 @@ $app.addEventListener("click", async (ev) => {
     case "irEj": { const k = +el.dataset.i; if (k < 0 || k >= p.ejercicios.length) return; s.idx = k; s.descanso = null; db.guardar(); render(); return; }
     case "kg": case "reps": {
       const k = +el.dataset.k, d = +el.dataset.d, x = r.series[k];
-      if (act === "kg") { const step = (+x.kg || 0) >= 10 ? 1 : 0.5; x.kg = Math.max(0, Math.round(((+x.kg || 0) + d * step) * 10) / 10); }
+      if (act === "kg") x.kg = pasoPeso(r.id, x.kg, d);
       else x.reps = Math.max(0, (+x.reps || 0) + d);
       // propaga el peso a las series siguientes sin hacer
       if (act === "kg") for (let j = k + 1; j < r.series.length; j++) if (!r.series[j].hecho) r.series[j].kg = x.kg;
@@ -546,7 +580,7 @@ function refrescaSeries(r) {
     const row = document.querySelector(`.serie[data-k="${k}"]`); if (!row) return;
     row.classList.toggle("hecha", !!x.hecho);
     const kg = row.querySelector('[data-campo="kg"]'), rp = row.querySelector('[data-campo="reps"]');
-    if (document.activeElement !== kg) kg.value = fmtKg(+x.kg || 0);
+    if (kg && document.activeElement !== kg) kg.value = fmtKg(+x.kg || 0);
     if (document.activeElement !== rp) rp.value = x.reps;
   });
   document.querySelector(".difsel")?.classList.toggle("apagado", !r.series.every((x) => x.hecho));

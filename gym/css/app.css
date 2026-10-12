@@ -194,3 +194,5 @@ body.flash::after{content:"";position:fixed;inset:0;background:#fff;z-index:60;p
 
 .lista li .dif,.lista.compacta li span.dif{color:#fff}
 .dia b{font-size:13px}
+
+.step.corp{display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--txt2);font-weight:650}
