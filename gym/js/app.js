@@ -41,6 +41,7 @@ function cortoPeso(id, v) {
 }
 const serieTxt = (id, x) => { const p = cortoPeso(id, x.kg); return p ? `${p}×${x.reps}` : `${x.reps} reps`; };
 const ETQ_PESO = { mancuerna: "kg", discos: "+ kg discos", placas: "placa" };
+const VERSION_APP = "5 · 12 oct";
 const SERIE_SEG = 40; // tiempo estimado de trabajo por serie
 // Alternos (1 rep = los dos brazos) y unilaterales (todas las reps con una pierna y luego la otra) duran el doble.
 const segSerie = (e) => SERIE_SEG * (e && EJ[e.id]?.doble ? 2 : 1);
@@ -284,6 +285,7 @@ function vAjustes() {
     <section class="card"><h3>Copia de seguridad</h3><p class="suave">Tus datos se guardan solo en este iPhone. Haz una copia de vez en cuando y guárdala en Archivos o iCloud.</p>
       <div class="fila"><button class="mini prim" data-act="exportar">Exportar copia</button><label class="mini">Importar copia<input type="file" id="imp" accept=".json,application/json" hidden></label></div></section>
     <section class="card"><h3>Instalar en el iPhone</h3><ol class="pasos"><li>Abre esta página en Safari, Chrome o Brave.</li><li>Pulsa <b>Compartir</b> (el cuadrado con la flecha).</li><li>Elige <b>Añadir a pantalla de inicio</b> y confirma.</li><li>Abre la app desde el icono: funciona sin conexión.</li></ol></section>
+    <section class="card"><h3>Versión</h3><div class="fila"><span>Versión ${VERSION_APP}</span><button class="mini prim" data-act="actualizar">Buscar actualización</button></div></section>
     <button class="btn peligro" data-act="borrarTodo">Borrar todos los datos</button>`;
 }
 
@@ -502,6 +504,11 @@ $app.addEventListener("click", async (ev) => {
     case "borraRegla": if (confirm("¿Borrar esta fecha?")) { db.borrarRegla(el.dataset.f); render(); } return;
     case "manual": { db.forzarSemana(db.infoSemana().lunes, +el.dataset.n); render(); return; }
     case "probar": pitidoFin(); destello(); return;
+    case "actualizar": {
+      toast("Buscando actualización…");
+      try { const reg = await navigator.serviceWorker?.getRegistration(); await reg?.update(); } catch {}
+      setTimeout(() => location.reload(), 1200); return;
+    }
     case "exportar": return exportarCopia();
     case "borrarTodo": if (confirm("Se borrarán todos tus registros de este iPhone. ¿Seguro?") && confirm("¿De verdad? No se puede deshacer.")) { db.borrarTodo(); render(); } return;
     case "cambiaDia": {
