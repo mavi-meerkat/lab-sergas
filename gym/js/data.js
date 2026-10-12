@@ -11,8 +11,8 @@ export const FASES = [
 // Catálogo de ejercicios: nombre, zona trabajada y figura (ver figuras.js).
 // peso: "mancuerna" (por defecto) · "discos" (peso propio de la máquina + discos) · "placas" (número de placa) · "corporal".
 export const EJ = {
-  pressMaqPlano:   { nombre: "Press de pecho en máquina plano", zona: "Pecho", equipo: "Máquina", peso: "discos" },
-  pressMaqInc:     { nombre: "Press de pecho en máquina inclinado", zona: "Pecho", equipo: "Máquina", peso: "discos" },
+  pressMaqPlano:   { nombre: "Press de pecho en máquina plano", zona: "Pecho", equipo: "Máquina", peso: "discos", paso: 2.5 },
+  pressMaqInc:     { nombre: "Press de pecho en máquina inclinado", zona: "Pecho", equipo: "Máquina", peso: "discos", paso: 2.5 },
   aperturas:       { nombre: "Aperturas de pecho con mancuernas", zona: "Pecho", equipo: "Mancuernas · banco plano" },
   elevFrontal:     { nombre: "Elevaciones frontales alternas con mancuernas", zona: "Hombro", equipo: "Mancuernas", doble: "brazo", nota: "Ejercicio alterno: 1 repetición = los dos brazos, por eso cuenta el doble de tiempo." },
   curlPolea:       { nombre: "Curl de bíceps en polea baja", zona: "Bíceps", equipo: "Polea baja", peso: "placas" },
@@ -38,7 +38,7 @@ export const EJ = {
   aperturaAlterna: { nombre: "Elevación / apertura alterna con mancuernas", zona: "Espalda · hombro posterior", equipo: "Mancuernas", doble: "brazo", nota: "Ejercicio alterno: 1 repetición = los dos brazos, por eso cuenta el doble de tiempo." },
   crucesInv:       { nombre: "Cruces invertidos en polea", zona: "Hombro posterior", equipo: "Polea", peso: "placas" },
 
-  prensa:          { nombre: "Prensa de piernas", zona: "Cuádriceps", equipo: "Máquina", peso: "discos" },
+  prensa:          { nombre: "Prensa de piernas", zona: "Cuádriceps", equipo: "Máquina", peso: "discos", paso: 20 },
   extCuad:         { nombre: "Extensión de cuádriceps", zona: "Cuádriceps", equipo: "Máquina", peso: "placas" },
   curlFemoral:     { nombre: "Curl femoral en máquina", zona: "Isquios", equipo: "Máquina", peso: "placas" },
   abductores:      { nombre: "Máquina de abductores (abrir)", zona: "Glúteo", equipo: "Máquina", peso: "placas" },
@@ -47,7 +47,7 @@ export const EJ = {
   rumano:          { nombre: "Peso muerto rumano con mancuernas", zona: "Isquios", equipo: "Mancuernas" },
   hipThrust:       { nombre: "Hip Thrust con mancuerna", zona: "Glúteo", equipo: "Mancuerna · banco" },
   sumo:            { nombre: "Sentadilla Sumo con mancuerna", zona: "Aductores", equipo: "Mancuerna" },
-  hack:            { nombre: "Sentadilla Hack en máquina", zona: "Cuádriceps", equipo: "Máquina", peso: "discos" },
+  hack:            { nombre: "Sentadilla Hack en máquina", zona: "Cuádriceps", equipo: "Máquina", peso: "discos", paso: 5 },
   rumanoUni:       { nombre: "Peso muerto rumano a una pierna", zona: "Isquios", equipo: "Mancuernas ligeras · banco", doble: "pierna", nota: "Ejercicio por pierna: haces las repeticiones con una pierna y luego con la otra, por eso cuenta el doble de tiempo." },
 };
 

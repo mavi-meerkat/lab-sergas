@@ -19,7 +19,7 @@ function pasoPeso(id, v, d) {
     if (d > 0) return MANC.find((x) => x > v + 1e-9) ?? v + 2.5;
     return [...MANC].reverse().find((x) => x < v - 1e-9) ?? 0;
   }
-  if (t === "discos") return Math.max(0, Math.round((v + d * 2.5) * 10) / 10);
+  if (t === "discos") { const st = EJ[id]?.paso || 2.5; return Math.max(0, Math.round((v + d * st) * 10) / 10); } // hack 5 kg · press máquina 2,5 kg · prensa 20 kg
   if (t === "placas") return Math.max(0, Math.round(v) + d);
   return 0;
 }
@@ -41,7 +41,7 @@ function cortoPeso(id, v) {
 }
 const serieTxt = (id, x) => { const p = cortoPeso(id, x.kg); return p ? `${p}×${x.reps}` : `${x.reps} reps`; };
 const ETQ_PESO = { mancuerna: "kg", discos: "+ kg discos", placas: "placa" };
-const VERSION_APP = "6 · 12 oct";
+const VERSION_APP = "7 · 12 oct";
 const SERIE_SEG = 40; // tiempo estimado de trabajo por serie
 // Alternos (1 rep = los dos brazos) y unilaterales (todas las reps con una pierna y luego la otra) duran el doble.
 const segSerie = (e) => SERIE_SEG * (e && EJ[e.id]?.doble ? 2 : 1);
