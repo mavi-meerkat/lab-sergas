@@ -55,6 +55,7 @@ function solve(p) {
       const [E, H2] = ik(S, H, L.up * k, L.fo * kf, p["eb" + i] ?? def);
       return { S, E, H: H2 };
     }
+    if (p["eo" + i]) { const E = add(S, p["eo" + i]); return { S, E, H: add(E, dir(p["f" + i] ?? 0), L.fo * kf) }; }
     const E = add(S, dir(p["a" + i] ?? 0), L.up * k);
     return { S, E, H: add(E, dir(p["f" + i] ?? 0), L.fo * kf) };
   });
@@ -154,9 +155,9 @@ function drawFigure(g, J, hi, spec) {
       g.circle(add(J.head, dir(J.t), 10), 4.5, "bd fillb hair");
       g.circle(J.head, L.headR, "bd fillb");
     } else {
-      const back = dir(J.t + 90), up = dir(J.t);
+      const back = dir(J.t + (J.pose.boca ? -90 : 90)), up = dir(J.t);
       const c = add(add(J.head, back, 8.5), up, 2.5);
-      g.line(c, add(add(c, back, 3), dir(J.t + 160), 9), "bd hair", 5);
+      g.line(c, add(add(c, back, 3), dir(J.t + (J.pose.boca ? -160 : 160)), 9), "bd hair", 5);
       g.line(J.top, add(J.top, dir(J.t), L.neck + 2), "bd", 6);
       g.circle(J.head, L.headR, "bd fillb");
     }
@@ -233,7 +234,7 @@ export const FIG = {
     },
   },
   elevFrontal: {
-    hi: ["upper"], keys: [P(SIDE, both({ a: 4, f: 6 })), P(SIDE, both({ a: 92, f: 96 }))],
+    hi: ["upper"], keys: [P(SIDE, both({ a: 4, f: 6 })), P(SIDE, { a1: 92, f1: 96, a2: 4, f2: 6 }), P(SIDE, both({ a: 4, f: 6 })), P(SIDE, { a1: 4, f1: 6, a2: 92, f2: 96 })],
     farProps: dbEndFar, front: dbEnd,
   },
   curlPolea: {
@@ -285,9 +286,10 @@ export const FIG = {
   jalonCorta: jalon(10, 8, false),
   remoCorta: remo(), remoLarga: remo(),
   cubana: {
-    hi: ["upper"],
-    keys: [P(FRONT, mirror({ a: 6, f: 8 })), P(FRONT, mirror({ a: 88, f: 4 })), P(FRONT, mirror({ a: 88, f: 176 })), P(FRONT, mirror({ a: 88, f: 4 }))],
-    front: dbFront,
+    hi: ["upper", "fore"],
+    // Codos a la altura de los hombros y a 90º; los antebrazos pasan de apuntar al frente a apuntar al techo.
+    keys: [P(FRONT, { ...mirror({ a: 90, f: 172 }), kf1: 0.2, kf2: 0.2 }), P(FRONT, { ...mirror({ a: 90, f: 180 }), kf1: 1, kf2: 1 })],
+    front: (g, J) => J.arm.forEach((a) => g.db(a.H, Math.hypot(a.H[0] - a.E[0], a.H[1] - a.E[1]) < 12 ? "end" : "h", 0.9)),
   },
   facePull: {
     hi: ["upper"],
@@ -299,9 +301,10 @@ export const FIG = {
   tricepsBarra: triceps(false),
   chestPull: {
     hi: ["torso", "upper"],
-    keys: [P(SIDE, { x: 84, y: 78, t: 165, ...both({ a: 122, f: 122 }) }), P(SIDE, { x: 84, y: 78, t: 165, ...both({ a: -8, f: -8 }) })],
-    back: (g) => { g.column(180, 6); g.wheel([174, 14]); },
-    front: (g, J) => { const H = J.arm[0].H; g.cable([174, 14], H); g.bar(add(H, [-4, -1]), add(H, [4, 1]), 4); },
+    // Codos hacia atrás y algo hacia arriba, manos a la parte alta del pecho, sacando pecho al final.
+    keys: [P(SIDE, { x: 86, y: 77, t: 172, ...both({ eo: [23.5, -11], f: 115 }) }), P(SIDE, { x: 86, y: 77, t: 187, ...both({ eo: [-19, -5], f: 82 }) })],
+    back: (g) => { g.column(182, 6); g.wheel([176, 24]); },
+    front: (g, J) => { const H = J.arm[0].H; g.cable([176, 24], H); g.bar(add(H, [-1, -4]), add(H, [1, 4]), 4); },
   },
   fondosBanco: {
     hi: ["upper"],
@@ -309,10 +312,10 @@ export const FIG = {
     back: (g) => g.bench(32, 78, 109),
   },
   aperturaAlterna: {
-    hi: ["upper"],
-    keys: [P(FRONT, { st1: 1, st2: 1, hr1: [-15, 6], hr2: [15, 6] }), P(FRONT, { st1: 1, st2: 1, hr1: [-15, 6], hr2: [64, 2] }),
-      P(FRONT, { st1: 1, st2: 1, hr1: [-15, 6], hr2: [15, 6] }), P(FRONT, { st1: 1, st2: 1, hr1: [-64, 2], hr2: [15, 6] })],
-    front: dbFront,
+    hi: ["upper"], vb: "-14 -24 228 178",
+    // Brazos estirados al frente y paralelos al suelo; sube uno hasta apuntar al techo y luego el otro.
+    keys: [P(SIDE, both({ a: 90, f: 90 })), P(SIDE, { a1: 176, f1: 178, a2: 90, f2: 90 }), P(SIDE, both({ a: 90, f: 90 })), P(SIDE, { a1: 90, f1: 90, a2: 176, f2: 178 })],
+    farProps: dbEndFar, front: dbEnd,
   },
   crucesInv: {
     hi: ["upper"],
@@ -345,12 +348,14 @@ export const FIG = {
     front: (g, J) => { const l = J.leg[0], s = angOf([l.A[0] - l.K[0], l.A[1] - l.K[1]]); const c = add(add(l.K, dir(s), 28), dir(s + 90), 6); g.line(l.K, c, "eqb", 4); g.circle(c, 5, "eqpad"); },
   },
   curlFemoral: {
-    hi: ["shin"],
-    keys: [P(SEAT, { x: 78, y: 104, ...both({ s: 80 }), a1: 10, f1: 40, a2: 10, f2: 40 }), P(SEAT, { x: 78, y: 104, ...both({ s: -18 }), a1: 10, f1: 40, a2: 10, f2: 40 })],
-    back: (g) => machineSeat(g, 78, 104),
+    hi: ["thigh"],
+    // Tumbada boca abajo: los talones suben hacia los glúteos.
+    keys: [{ view: "side", x: 104, y: 94, t: -90, boca: 1, ...both({ l: 92, s: 92, fa: 2, a: -35, f: -95, k: 0.7 }) },
+      { view: "side", x: 104, y: 94, t: -90, boca: 1, ...both({ l: 92, s: 205, fa: 115, a: -35, f: -95, k: 0.7 }) }],
+    back: (g) => { g.rect(30, 100, 116, 8, "eqf", 4); g.line([50, 108], [50, 150], "eql", 4); g.line([128, 108], [128, 150], "eql", 4); g.line([36, 150], [150, 150], "eql", 4); },
     front: (g, J) => {
-      const l = J.leg[0], s = angOf([l.A[0] - l.K[0], l.A[1] - l.K[1]]); const c = add(add(l.K, dir(s), 28), dir(s - 90), 6);
-      g.line(l.K, c, "eqb", 4); g.circle(c, 5, "eqpad"); g.rect(88, 92, 26, 6, "eqpad", 3);
+      const l = J.leg[0], s = angOf([l.A[0] - l.K[0], l.A[1] - l.K[1]]); const c = add(add(l.K, dir(s), 30), dir(s + 90), 6.5);
+      g.line(add(l.K, [0, 8]), c, "eqb", 4); g.circle(c, 5.5, "eqpad");
     },
   },
   abductores: abd(true), aductores: abd(false),
@@ -384,8 +389,10 @@ export const FIG = {
   },
   rumanoUni: {
     hi: ["thigh"],
-    keys: [{ view: "side", x: 98, y: 77, t: 180, ft1: [100, 147], l2: 0, s2: 0, ...both({ a: 2, f: 2 }) },
-      { view: "side", x: 92, y: 82, t: 104, ft1: [100, 147], l2: -78, s2: -84, ...both({ a: 2, f: 2 }) }],
+    // Pierna de atrás apoyada en el banco (rodilla a 90º); la de delante en el suelo hace el peso muerto.
+    keys: [{ view: "side", x: 98, y: 77, t: 180, ft1: [104, 147], l2: -4, s2: -94, fa2: -4, ...both({ a: 2, f: 2 }) },
+      { view: "side", x: 92, y: 82, t: 106, ft1: [104, 147], l2: -10, s2: -100, fa2: -10, ...both({ a: 2, f: 2 }) }],
+    back: (g) => g.bench(34, 92, 116),
     farProps: dbEndFar, front: dbEnd,
   },
 
@@ -469,7 +476,7 @@ function frame(id, pose, opts = {}) {
 export function svgEstatico(id, opts = {}) {
   const spec = FIG[id] || FIG.cinta;
   const k = spec.keys[Math.min(spec.keys.length - 1, opts.key ?? 1)];
-  return `<svg viewBox="0 0 200 156" class="fig" aria-hidden="true">${frame(FIG[id] ? id : "cinta", k, opts)}</svg>`;
+  return `<svg viewBox="${spec.vb || "0 0 200 156"}" class="fig" aria-hidden="true">${frame(FIG[id] ? id : "cinta", k, opts)}</svg>`;
 }
 
 const vivos = new Set();
@@ -493,7 +500,7 @@ const quieto = () => { try { return matchMedia("(prefers-reduced-motion: reduce)
 
 export function animar(el, id, opts = {}) {
   if (!FIG[id]) id = "cinta";
-  el.innerHTML = `<svg viewBox="0 0 200 156" class="fig" role="img" aria-label="Ejemplo del ejercicio"></svg>`;
+  el.innerHTML = `<svg viewBox="${FIG[id].vb || "0 0 200 156"}" class="fig" role="img" aria-label="Ejemplo del ejercicio"></svg>`;
   const svg = el.firstChild;
   for (const a of vivos) if (a.el === el) vivos.delete(a);
   if (quieto()) { svg.innerHTML = frame(id, FIG[id].keys[1], opts); return; }
