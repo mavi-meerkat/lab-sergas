@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#0F6E66"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M214 92 h84 M228 92 v86 l-78 138 a38 38 0 0 0 33 57 h146 a38 38 0 0 0 33-57 l-78-138 v-86"/>
+  </g>
+  <path d="M175 300 h162 l26 46 a20 20 0 0 1 -17 30 h-180 a20 20 0 0 1 -17-30 z" fill="#7FE0D3" opacity=".9"/>
+  <text x="256" y="462" text-anchor="middle" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-weight="800" font-size="96" fill="#FFFFFF" letter-spacing="6">LAB</text>
+</svg>

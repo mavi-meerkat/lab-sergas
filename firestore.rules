@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Solo estas cuentas pueden usar la app.
+    function permitido() {
+      return request.auth != null
+        && request.auth.token.email in ['mavieska6@gmail.com'];
+    }
+    // Clave del temario cifrado: la guarda la app la primera vez y luego solo se lee.
+    match /config/clave {
+      allow read, create: if permitido();
+    }
+    // Progreso de cada usuario: solo lo ve y lo cambia su dueño.
+    match /users/{uid}/{document=**} {
+      allow read, write: if permitido() && request.auth.uid == uid;
+    }
+  }
+}
