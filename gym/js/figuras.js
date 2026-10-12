@@ -289,7 +289,8 @@ export const FIG = {
     hi: ["upper", "fore"],
     // Codos a la altura de los hombros y a 90º; los antebrazos pasan de apuntar al frente a apuntar al techo.
     keys: [P(FRONT, { ...mirror({ a: 90, f: 172 }), kf1: 0.2, kf2: 0.2 }), P(FRONT, { ...mirror({ a: 90, f: 180 }), kf1: 1, kf2: 1 })],
-    front: (g, J) => J.arm.forEach((a) => g.db(a.H, Math.hypot(a.H[0] - a.E[0], a.H[1] - a.E[1]) < 12 ? "end" : "h", 0.9)),
+    // La muñeca no gira: la mancuerna va en bloque con el antebrazo (siempre horizontal, de lado a lado).
+    front: dbFront,
   },
   facePull: {
     hi: ["upper"],
