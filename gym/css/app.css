@@ -137,24 +137,21 @@ h3{font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
 .wfoot.dentro{margin-top:8px}
 .resumen h3{color:var(--facil)}
 
-/* Descanso */
-.descanso{position:fixed;inset:0;z-index:20;background:color-mix(in srgb,var(--acc) 92%,#000);color:#fff;display:flex;align-items:center;justify-content:center;padding:calc(var(--sat) + 20px) 24px calc(var(--sab) + 20px)}
+/* Descanso: barra fija abajo que deja ver y editar el ejercicio */
+.descanso{position:fixed;left:8px;right:8px;bottom:calc(var(--sab) + 8px);z-index:20;background:color-mix(in srgb,var(--acc) 94%,#000);color:#fff;border-radius:22px;padding:10px 12px;display:grid;grid-template-columns:76px 1fr;grid-template-rows:auto auto;gap:6px 12px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:540px;margin:0 auto}
 .descanso[hidden]{display:none}
-.dcont{width:100%;max-width:400px;text-align:center}
+.descanso .anillo{position:relative;width:76px;height:76px;grid-row:1/3}
+.descanso .anillo svg{width:100%;height:100%;transform:rotate(-90deg)}
+.descanso .anillo circle{fill:none;stroke-width:10}
+.descanso .fondo{stroke:rgba(255,255,255,.22)}
+.descanso .prog{stroke:#fff;stroke-linecap:round;transition:stroke-dashoffset .25s linear}
+.descanso .anillo b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
 .descanso .etq{color:#fff;opacity:.85}
-.anillo{position:relative;width:240px;height:240px;margin:18px auto}
-.anillo svg{width:100%;height:100%;transform:rotate(-90deg)}
-.anillo circle{fill:none;stroke-width:9}
-.anillo .fondo{stroke:rgba(255,255,255,.2)}
-.anillo .prog{stroke:#fff;stroke-linecap:round;transition:stroke-dashoffset .25s linear}
-.anillo b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:64px;font-weight:800;font-variant-numeric:tabular-nums}
-.dbtns{display:flex;gap:10px;justify-content:center}
-.dbtns .mini{background:rgba(255,255,255,.18);color:#fff;min-width:90px}
-.prox{margin:22px 0 4px;background:rgba(255,255,255,.12);border-radius:16px;padding:12px}
-.prox b{display:block;font-size:17px;margin-top:2px}
-.mini-fig{width:160px;margin:6px auto 0;background:rgba(255,255,255,.9);border-radius:12px}
-.descanso .btn{background:#fff;color:var(--acc)}
-
+.dtxt b{display:block;font-size:15px;line-height:1.25;margin-top:2px}
+.dbtns{display:flex;gap:6px}
+.dbtns .mini{flex:1;background:rgba(255,255,255,.18);color:#fff;min-height:38px;padding:0 8px}
+.dbtns .mini.fuerte{background:#fff;color:var(--acc)}
+body.con-descanso .vista{padding-bottom:calc(var(--sab) + 140px)}
 /* Cardio */
 .cardiocard .bigfig svg{transform:rotate(calc(var(--inc, 0) * -0.6deg));transition:transform 1s ease}
 .cardiocard .bigfig{overflow:hidden}
@@ -196,3 +193,12 @@ body.flash::after{content:"";position:fixed;inset:0;background:#fff;z-index:60;p
 .dia b{font-size:13px}
 
 .step.corp{display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--txt2);font-weight:650}
+
+.energia h2{margin-bottom:6px}
+.energias{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.energias .en{min-height:60px;border-radius:16px;border:2px solid var(--line);background:var(--card);font-size:18px;font-weight:700;cursor:pointer}
+.energias .en.alta{border-color:var(--facil)}.energias .en.baja{border-color:var(--dificil)}
+.energia-nota{background:var(--soft);border-radius:12px;padding:10px 12px;margin:0}
+[data-csig].pronto{background:var(--acc);color:#fff;border-radius:12px;padding:8px 10px;font-weight:750}
+.copia{background:var(--soft);border-radius:14px;padding:12px;margin-top:12px}
+.copia b{display:block}.copia span{display:block;font-size:13px;color:var(--txt2)}.copia .btn{margin-top:10px;min-height:46px}

@@ -504,7 +504,7 @@ export function animar(el, id, opts = {}) {
   el.innerHTML = `<svg viewBox="${FIG[id].vb || "0 0 200 156"}" class="fig" role="img" aria-label="Ejemplo del ejercicio"></svg>`;
   const svg = el.firstChild;
   for (const a of vivos) if (a.el === el) vivos.delete(a);
-  if (quieto()) { svg.innerHTML = frame(id, FIG[id].keys[1], opts); return; }
+  // Siempre animadas (aunque el iPhone tenga activado "Reducir movimiento"): el movimiento es la explicación del ejercicio.
   vivos.add({ el, svg, id, opts, t0: performance.now() });
   if (!raf) raf = requestAnimationFrame(tick);
 }

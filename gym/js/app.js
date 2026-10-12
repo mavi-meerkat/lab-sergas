@@ -41,7 +41,7 @@ function cortoPeso(id, v) {
 }
 const serieTxt = (id, x) => { const p = cortoPeso(id, x.kg); return p ? `${p}×${x.reps}` : `${x.reps} reps`; };
 const ETQ_PESO = { mancuerna: "kg", discos: "+ kg discos", placas: "placa" };
-const VERSION_APP = "5 · 12 oct";
+const VERSION_APP = "6 · 12 oct";
 const SERIE_SEG = 40; // tiempo estimado de trabajo por serie
 // Alternos (1 rep = los dos brazos) y unilaterales (todas las reps con una pierna y luego la otra) duran el doble.
 const segSerie = (e) => SERIE_SEG * (e && EJ[e.id]?.doble ? 2 : 1);
@@ -295,7 +295,22 @@ function vEntreno(fecha) {
   ponFase(semana);
   if (plan.tipo === "descanso") return `<a class="volver" href="#/hoy">‹ Hoy</a><section class="card"><h2>Día de descanso</h2></section>`;
   const s = ses || db.crearSesion(fecha, dia, semana);
+  const empezado = s.inicio || s.fin || s.cardio?.inicio || Object.values(s.ej || {}).some((r) => r.series?.some((x) => x.hecho));
+  if (!s.energia && !empezado) return vEnergia(s, plan);
   return plan.tipo === "cardio" ? vCardio(s, plan) : vFuerza(s, plan);
+}
+const ENERGIA = { alta: "⚡ Con energía", normal: "🙂 Normal", baja: "🪫 Con poca energía" };
+function vEnergia(s, p) {
+  return `<header class="wbar"><button class="x" data-act="salir" aria-label="Salir">✕</button><div class="wt"><b>${esc(p.titulo)}</b><span>Semana ${s.semana} · ${fase(s.semana).nombre}</span></div></header>
+    <section class="card energia"><h2>¿Cómo te encuentras hoy?</h2>
+      <p class="suave">${p.tipo === "cardio" ? "Te diré si conviene ir a la parte alta o baja de los rangos de velocidad e inclinación." : "Si hoy tienes poca energía, bajaré un escalón los pesos propuestos."}</p>
+      <div class="energias">${Object.entries(ENERGIA).map(([k, t]) => `<button class="en ${k}" data-act="energia" data-v="${k}">${t}</button>`).join("")}</div>
+    </section>`;
+}
+function consejoEnergia(s, tipo) {
+  if (s.energia === "baja") return tipo === "cardio" ? "Hoy con poca energía: usa la parte baja de los rangos de velocidad e inclinación." : "Hoy con poca energía: los pesos propuestos bajan un escalón. Escucha a tu cuerpo.";
+  if (s.energia === "alta") return tipo === "cardio" ? "Hoy con energía: puedes ir a la parte alta de los rangos." : "Hoy con energía: apura la parte alta del rango de repeticiones.";
+  return "";
 }
 
 function ultimaVez(id, fechaActual, semana) {
@@ -322,10 +337,22 @@ function vFuerza(s, p) {
   // Peso por defecto: el de la última vez que hiciste este ejercicio en la MISMA semana del ciclo (S1 con S1…).
   const kgDe = (k) => { const sr = mismaFase?.series; if (!sr || !sr.length) return 0; return +(sr[k] || sr[sr.length - 1]).kg || 0; };
   const repsDef = p.vol.repsMax;
-  for (let k = 0; k < p.vol.series; k++) r.series[k] = r.series[k] || { kg: kgDe(k), reps: repsDef, hecho: false };
-  db.guardar();
   const sinPeso = /sin cargar/i.test(e.detalle);
   const tp = tipoPeso(e.id);
+  if (!r.series.length) {
+    // Ajuste automático: fácil → sube un escalón; difícil → baja uno; poca energía hoy → baja uno más.
+    let pasos = 0; const motivos = [];
+    if (mismaFase && !sinPeso && tp !== "corporal") {
+      if (mismaFase.dif === "facil") { pasos++; motivos.push("la última vez te resultó fácil"); }
+      if (mismaFase.dif === "dificil") { pasos--; motivos.push("la última vez te costó"); }
+      if (s.energia === "baja") { pasos--; motivos.push("hoy tienes poca energía"); }
+    }
+    const ajusta = (v) => { for (let j = 0; j < Math.abs(pasos); j++) v = pasoPeso(e.id, v, Math.sign(pasos)); return v; };
+    for (let k = 0; k < p.vol.series; k++) r.series[k] = { kg: ajusta(kgDe(k)), reps: repsDef, hecho: false };
+    r.ajuste = pasos ? `${pasos > 0 ? "He subido" : "He bajado"} el peso ${Math.abs(pasos) > 1 ? Math.abs(pasos) + " escalones" : "un escalón"} porque ${motivos.join(" y ")}.` : "";
+  }
+  for (let k = 0; k < p.vol.series; k++) r.series[k] = r.series[k] || { kg: kgDe(k), reps: repsDef, hecho: false };
+  db.guardar();
 
   const dots = p.ejercicios.map((x, k) => {
     const rr = s.ej[k], ok = rr && rr.dif;
@@ -337,10 +364,11 @@ function vFuerza(s, p) {
       <div class="step"><button data-act="reps" data-k="${k}" data-d="-1">−</button><input inputmode="numeric" data-campo="reps" data-k="${k}" value="${x.reps}"><button data-act="reps" data-k="${k}" data-d="1">+</button><small>reps</small></div>
       <button class="check" data-act="serie" data-k="${k}" aria-label="Serie hecha">✓</button></div>`).join("");
   const todas = r.series.every((x) => x.hecho);
-  const ultTxt = ref ? `<div class="ultima"><b>Última vez${mismaFase ? ` en la semana ${s.semana}` : ` (semana ${ref.semana})`}:</b> ${ref.series.map((x) => serieTxt(e.id, x)).join(" · ")}${ref.dif ? ` <span class="dif ${ref.dif}">${DIF[ref.dif]}</span>` : ""}<br><span class="suave">${esc(consejo(ref, e.id))}</span></div>` : "";
+  const ultTxt = ref ? `<div class="ultima"><b>Última vez${mismaFase ? ` en la semana ${s.semana}` : ` (semana ${ref.semana})`}:</b> ${ref.series.map((x) => serieTxt(e.id, x)).join(" · ")}${ref.dif ? ` <span class="dif ${ref.dif}">${DIF[ref.dif]}</span>` : ""}<br><span class="suave">${esc(r.ajuste || consejo(ref, e.id))}</span></div>` : "";
+  const enTxt = consejoEnergia(s, "fuerza");
   const ultimo = i === n - 1;
   const restante = estimarRestante(s, p);
-  return `<header class="wbar"><button class="x" data-act="salir" aria-label="Salir">✕</button><div class="wt"><b>${esc(p.subtitulo)}</b><span>Semana ${s.semana} · ${fase(s.semana).nombre}</span></div><div class="reloj"><b data-reloj>${s.inicio ? mmss((Date.now() - s.inicio) / 1000) : "0:00"}</b><span>≈ ${Math.round(restante / 60)} min rest.</span></div></header>
+  return `<header class="wbar"><button class="x" data-act="salir" aria-label="Salir">✕</button><div class="wt"><b>${esc(p.subtitulo)}</b><span>Semana ${s.semana} · ${fase(s.semana).nombre}${s.energia ? " · " + ENERGIA[s.energia].split(" ")[0] : ""}</span></div><div class="reloj"><b data-reloj>${s.inicio ? mmss((Date.now() - s.inicio) / 1000) : "0:00"}</b><span>≈ ${Math.round(restante / 60)} min rest.</span></div></header>
     <div class="dots">${dots}</div>
     <section class="card ejcard">
       <div class="bigfig" data-fig="${e.id}"></div>
@@ -348,7 +376,7 @@ function vFuerza(s, p) {
       <h2>${esc(e.nombre)}</h2>
       ${e.detalle ? `<p class="detalle">${esc(e.detalle)}</p>` : ""}${e.nota ? `<p class="intro">${esc(e.nota)}</p>` : ""}
       <div class="pauta"><div><b>${p.vol.series}</b><span>series</span></div><div><b>${p.vol.reps}</b><span>${e.doble === "pierna" ? "reps por pierna" : e.doble === "brazo" ? "reps (2 brazos)" : "reps"}</span></div><div><b>${p.vol.descansoTxt || p.vol.descanso + " s"}</b><span>descanso</span></div></div>
-      ${ultTxt}
+      ${ultTxt}${enTxt ? `<p class="nota">${esc(enTxt)}</p>` : ""}
     </section>
     <section class="card series">${sinPeso ? `<p class="nota">Sin cargar peso: deja 0 discos (solo el peso propio de la máquina).</p>` : tp === "discos" ? `<p class="nota">Apunta los kg de discos que añades; la máquina ya tiene su propio peso.</p>` : tp === "placas" ? `<p class="nota">Apunta el número de placa.</p>` : ""}${filas}</section>
     <section class="card difsel ${todas ? "" : "apagado"}"><h3>¿Cómo te ha resultado?</h3><div class="difs">${Object.entries(DIF).map(([k, t]) => `<button class="dif ${k} ${r.dif === k ? "on" : ""}" data-act="dif" data-v="${k}">${t}</button>`).join("")}</div></section>
@@ -368,10 +396,14 @@ function estimarRestante(s, p) {
   });
   return t;
 }
+function avisoCopia(s) {
+  if (db.diaISO(db.parse(s.fecha)) !== 5 || db.st().ajustes.ultimaCopia === db.hoy()) return "";
+  return `<div class="copia"><b>💾 Es viernes: toca copia de seguridad</b><span>Guárdala en Archivos o iCloud para no perder tus registros.</span><button class="btn" data-act="exportar">Exportar copia</button></div>`;
+}
 function resumenFuerza(s, p) {
   const dur = Math.round((s.fin - (s.inicio || s.fin)) / 60000);
   const filas = p.ejercicios.map((e, k) => { const r = s.ej[k] || { series: [] }; const ok = (r.series || []).filter((x) => x.hecho); return `<li><b>${esc(e.nombre)}</b><span>${ok.length ? ok.map((x) => serieTxt(e.id, x)).join(" · ") : "sin registrar"}</span>${r.dif ? `<span class="dif ${r.dif}">${DIF[r.dif]}</span>` : ""}</li>`; }).join("");
-  return `<section class="card resumen"><h3>✓ Entreno completado · ${dur} min</h3><ul class="lista compacta">${filas}</ul><p class="nota">Puedes corregir cualquier dato tocando el número del ejercicio arriba.</p><a class="btn" href="#/hoy">Volver a Hoy</a></section>`;
+  return `<section class="card resumen"><h3>✓ Entreno completado · ${dur} min</h3><ul class="lista compacta">${filas}</ul><p class="nota">Puedes corregir cualquier dato tocando el número del ejercicio arriba.</p>${avisoCopia(s)}<a class="btn" href="#/hoy">Volver a Hoy</a></section>`;
 }
 
 // --- Cardio ---
@@ -393,7 +425,8 @@ function vCardio(s, p) {
       <div class="cbar">${barra}<u data-cprog></u></div>
       <div class="wfoot dentro">${ctrl}</div>
     </section>
-    ${c.hecho ? `<section class="card difsel"><h3>${c.dif ? "✓ Cardio completado" : "¡Hecho! ¿Cómo te ha resultado?"}</h3><div class="difs">${Object.entries(DIF).map(([k, t]) => `<button class="dif ${k} ${c.dif === k ? "on" : ""}" data-act="cDif" data-v="${k}">${t}</button>`).join("")}</div>${c.dif ? `<a class="btn" href="#/hoy">Volver a Hoy</a>` : ""}</section>` : ""}
+    ${c.hecho ? `<section class="card difsel"><h3>${c.dif ? "✓ Cardio completado" : "¡Hecho! ¿Cómo te ha resultado?"}</h3><div class="difs">${Object.entries(DIF).map(([k, t]) => `<button class="dif ${k} ${c.dif === k ? "on" : ""}" data-act="cDif" data-v="${k}">${t}</button>`).join("")}</div>${c.dif ? `${avisoCopia(s)}<a class="btn" href="#/hoy">Volver a Hoy</a>` : ""}</section>` : ""}
+    ${consejoEnergia(s, "cardio") ? `<p class="nota energia-nota">${esc(consejoEnergia(s, "cardio"))}</p>` : ""}
     <section class="card"><p class="intro">${esc(p.intro)}</p>${p.nota ? `<p class="nota">${esc(p.nota)}</p>` : ""}<ul class="cblist">${lista}</ul>
     ${c.inicio && !c.hecho ? `<button class="mini" data-act="cFin">Terminar ya</button>` : ""}</section>`;
 }
@@ -414,7 +447,7 @@ function montar(r, a) {
   }
 }
 
-let ultimoBloque = -1, ultimoAviso = -1;
+let ultimoBloque = -1, ultimoAviso = -1, aviso10 = -1;
 function tickEntreno(fecha) {
   const { ses: s, plan: p } = planDe(fecha);
   if (!s) return;
@@ -436,11 +469,18 @@ function tickEntreno(fecha) {
   if (q("[data-cvel]")) q("[data-cvel]").textContent = b.vel;
   if (q("[data-cinc]")) q("[data-cinc]").textContent = b.inc + " %";
   const sig = bl[bl.indexOf(b) + 1];
-  if (q("[data-csig]")) q("[data-csig]").textContent = sig ? `Después: ${sig.tipo} · ${sig.vel} km/h · ${sig.inc} %` : "Último bloque";
+  const quedaBloque = Math.ceil(b.fin - t);
+  const pronto = sig && c.inicio && !c.hecho && quedaBloque <= 10;
+  const cs = q("[data-csig]");
+  if (cs) {
+    cs.textContent = sig ? (pronto ? `En ${quedaBloque} s cambia a ${sig.vel} km/h · ${sig.inc} %` : `Después: ${sig.tipo} · ${sig.vel} km/h · ${sig.inc} %`) : "Último bloque";
+    cs.classList.toggle("pronto", !!pronto);
+  }
   if (q("[data-cprog]")) q("[data-cprog]").style.left = (t / total) * 100 + "%";
   document.querySelectorAll(".cblist li").forEach((li) => { const j = +li.dataset.b; li.className = j < bl.indexOf(b) || c.hecho ? "pasado" : j === bl.indexOf(b) && c.inicio ? "actual" : ""; });
   if (!c.inicio || c.pausa || c.hecho) return;
   const idx = bl.indexOf(b), resto = Math.ceil(b.fin - t);
+  if (sig && resto <= 10 && resto > 3 && aviso10 !== idx) { aviso10 = idx; pitido(784, 0.12); pitido(784, 0.12, 0.18); destello(); }
   if (resto <= 3 && resto > 0 && ultimoAviso !== idx * 10 + resto) { ultimoAviso = idx * 10 + resto; pitido(660, 0.1); }
   if (ultimoBloque !== -1 && idx !== ultimoBloque) { pitidoFin(); destello(); }
   ultimoBloque = idx;
@@ -451,34 +491,29 @@ function tickDescanso(s, p) {
   const box = document.getElementById("descanso");
   if (!box) return;
   const d = s.descanso;
-  if (!d) { box.hidden = true; return; }
+  const ocultar = () => { box.hidden = true; document.body.classList.remove("con-descanso"); };
+  if (!d) return ocultar();
   const resta = (d.fin - Date.now()) / 1000;
-  if (resta <= 0) {
-    s.descanso = null; db.guardar(); box.hidden = true; pitidoFin(); destello();
-    return;
-  }
+  if (resta <= 0) { s.descanso = null; db.guardar(); ocultar(); pitidoFin(); destello(); return; }
   const seg = Math.ceil(resta);
   if (seg <= 3 && ultimoAviso !== seg) { ultimoAviso = seg; pitido(660, 0.1); }
+  // Barra de descanso abajo: no tapa el ejercicio, así puedes ir ajustando el peso de la siguiente serie.
   if (box.hidden || box.dataset.id !== String(d.fin0)) {
     box.dataset.id = d.fin0;
-    const sigEj = p.ejercicios[s.idx ?? 0];
-    const r = s.ej[s.idx ?? 0];
-    const k = r ? r.series.findIndex((x) => !x.hecho) : 0;
-    const prox = d.tipo === "cambio" ? `<div class="etq">Siguiente ejercicio</div><b>${esc(sigEj.nombre)}</b><div class="mini-fig" data-fig2="${sigEj.id}"></div>`
-      : `<div class="etq">Siguiente</div><b>Serie ${k + 1} de ${p.vol.series}${r && r.series[k] && tipoPeso(r.id) !== "corporal" ? ` · ${txtPeso(r.id, r.series[k].kg)}` : ""}</b>`;
-    box.innerHTML = `<div class="dcont"><div class="etq">${d.tipo === "cambio" ? "Cambio de ejercicio" : "Descanso"}</div>
-      <div class="anillo"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="fondo"/><circle cx="60" cy="60" r="52" class="prog" data-anillo/></svg><b data-dcuenta></b></div>
-      <div class="dbtns"><button class="mini" data-act="dMas" data-d="-15">−15 s</button><button class="mini" data-act="dMas" data-d="15">+15 s</button></div>
-      <div class="prox">${prox}</div>
-      <button class="btn" data-act="dSalta">Saltar descanso</button></div>`;
+    box.innerHTML = `<div class="anillo"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" class="fondo"/><circle cx="60" cy="60" r="50" class="prog" data-anillo/></svg><b data-dcuenta></b></div>
+      <div class="dtxt"><div class="etq">${d.tipo === "cambio" ? "Cambio de ejercicio" : "Descanso"}</div><b data-dsig></b></div>
+      <div class="dbtns"><button class="mini" data-act="dMas" data-d="-15">−15</button><button class="mini" data-act="dMas" data-d="15">+15</button><button class="mini fuerte" data-act="dSalta">Saltar</button></div>`;
     box.hidden = false;
-    const mf = box.querySelector("[data-fig2]"); if (mf) animar(mf, mf.dataset.fig2);
+    document.body.classList.add("con-descanso");
   }
-  const tot = d.total || 1;
+  const r = s.ej[s.idx ?? 0];
+  const k = r ? r.series.findIndex((x) => !x.hecho) : -1;
+  const sigEj = p.ejercicios[s.idx ?? 0];
+  box.querySelector("[data-dsig]").textContent = d.tipo === "cambio" ? `Siguiente: ${sigEj.nombre}`
+    : k >= 0 ? `Siguiente: serie ${k + 1} de ${p.vol.series}${tipoPeso(r.id) !== "corporal" ? " · " + txtPeso(r.id, r.series[k].kg) : ""}` : "Última serie hecha";
   box.querySelector("[data-dcuenta]").textContent = mmss(resta);
-  const C = 2 * Math.PI * 52;
-  const an = box.querySelector("[data-anillo]");
-  an.style.strokeDasharray = C; an.style.strokeDashoffset = C * (1 - Math.min(1, resta / tot));
+  const C = 2 * Math.PI * 50, an = box.querySelector("[data-anillo]");
+  an.style.strokeDasharray = C; an.style.strokeDashoffset = C * (1 - Math.min(1, resta / (d.total || 1)));
 }
 function destello() { document.body.classList.remove("flash"); void document.body.offsetWidth; document.body.classList.add("flash"); }
 function toast(t) { const d = document.createElement("div"); d.className = "toast"; d.textContent = t; document.body.append(d); setTimeout(() => d.remove(), 2600); }
@@ -516,6 +551,7 @@ $app.addEventListener("click", async (ev) => {
       db.borrarSesion(f); db.crearSesion(f, +el.dataset.d, info.semana); ir(`#/entreno/${f}`); return;
     }
     case "salir": mantenerPantalla(false); ir("#/hoy"); return;
+    case "energia": { const { ses } = planDe(fecha); if (ses) { ses.energia = el.dataset.v; db.guardar(); render(); } return; }
   }
 
   const { ses: s, plan: p } = ctxE();
@@ -539,7 +575,9 @@ $app.addEventListener("click", async (ev) => {
       mantenerPantalla(true);
       const quedan = r.series.some((y) => !y.hecho);
       if (x.hecho && quedan) empezarDescanso(s, p.vol.descanso, "serie");
-      db.guardar(); refrescaSeries(r);
+      db.guardar(); refrescaSeries(r); tickDescanso(s, p);
+      const sig = r.series.findIndex((y) => !y.hecho);
+      if (x.hecho && sig >= 0) document.querySelector(`.serie[data-k="${sig}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
       if (!quedan) document.querySelector(".difsel")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
@@ -555,7 +593,7 @@ $app.addEventListener("click", async (ev) => {
       document.querySelector(".resumen")?.scrollIntoView({ behavior: "smooth" }); return;
     }
     case "dMas": if (s.descanso) { s.descanso.fin += +el.dataset.d * 1000; s.descanso.total = Math.max(1, s.descanso.total + +el.dataset.d); db.guardar(); } return;
-    case "dSalta": s.descanso = null; db.guardar(); document.getElementById("descanso").hidden = true; return;
+    case "dSalta": s.descanso = null; db.guardar(); tickDescanso(s, p); return;
     // cardio
     case "cGo": s.cardio = { inicio: Date.now(), pausado: 0, pausa: null, salto: 0 }; ultimoBloque = -1; db.guardar(); mantenerPantalla(true); render(); return;
     case "cPausa": {
@@ -567,7 +605,7 @@ $app.addEventListener("click", async (ev) => {
       if (b) s.cardio.salto = (s.cardio.salto || 0) + (b.fin - t) + 0.05;
       db.guardar(); return;
     }
-    case "cFin": if (confirm("¿Terminar el cardio ahora?")) { s.cardio.hecho = true; s.cardio.minutos = Math.round(cardioTrans(s.cardio) / 60); db.guardar(); mantenerPantalla(false); render(); } return;
+    case "cFin": if (confirm("¿Terminar el cardio ahora?")) { s.cardio.hecho = true; s.cardio.pausa = s.cardio.pausa || Date.now(); s.cardio.minutos = Math.round(cardioTrans(s.cardio) / 60); db.guardar(); mantenerPantalla(false); render(); } return;
     case "cDif": s.cardio.dif = el.dataset.v; db.guardar(); render(); return;
   }
 });
@@ -593,12 +631,14 @@ function refrescaSeries(r) {
   document.querySelector(".difsel")?.classList.toggle("apagado", !r.series.every((x) => x.hecho));
 }
 
+function copiaHecha() { db.st().ajustes.ultimaCopia = db.hoy(); db.guardar(); document.querySelectorAll(".copia").forEach((x) => x.remove()); toast("Copia exportada"); }
 async function exportarCopia() {
   const txt = db.exportar(), nombre = `entreno-copia-${db.hoy()}.json`;
   try {
     const file = new File([txt], nombre, { type: "application/json" });
-    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: "Copia de mi entreno" }); return; }
+    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: "Copia de mi entreno" }); copiaHecha(); return; }
   } catch (e) { if (e.name === "AbortError") return; }
+  copiaHecha();
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([txt], { type: "application/json" })); a.download = nombre; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
