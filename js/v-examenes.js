@@ -190,7 +190,7 @@ export function vistaExamenes(main, { sid = null, modo = null } = {}) {
       caja.append(el("div.fila.envuelve.pie-pregunta",
         boton("← Anterior", () => ir(i - 1), "secundario", { disabled: i === 0 }),
         boton("Borrar respuesta", borrar, "fantasma"),
-        boton(marc.has(i) ? "🚩 Quitar marca" : "🚩 Marcar para revisar", marcar, "fantasma"),
+        boton(marc.has(i) ? "🚩 Quitar marca" : "🚩 Marcar · dudo", marcar, "fantasma"),
         el("span.flex1"),
         boton("Siguiente →", () => ir(i + 1), "primario", { disabled: i === items.length - 1 })));
       zona.append(caja, el("p.suave.peq.solo-escritorio", "Teclas: A B C D para responder · ← → para moverte. Puedes cambiar la respuesta hasta entregar."));
@@ -286,6 +286,23 @@ export function vistaExamenes(main, { sid = null, modo = null } = {}) {
     if (prev.length) {
       const d = r.sobre10 - ((prev[0].resumen || {}).sobre10 || 0);
       der.append(el("b.peq.c-" + (d >= 0 ? "ok" : "mal"), `${d >= 0 ? "▲" : "▼"} ${num(Math.abs(d), 2)} respecto al simulacro anterior`));
+    }
+    {
+      // calibración: las marcadas son las dudas declaradas
+      const marc = new Set(sim.marcadas || []);
+      const md = r.detalle.filter((d) => d.cuenta && marc.has(d.i) && d.res !== "blanco");
+      const nm = r.detalle.filter((d) => d.cuenta && !marc.has(d.i) && d.res !== "blanco");
+      const okM = md.filter((d) => d.res === "acierto").length, okN = nm.filter((d) => d.res === "acierto").length;
+      if (md.length || nm.length) {
+        let txt = `🧠 Sin marcar (respondidas con seguridad): ${okN}/${nm.length} aciertos`;
+        if (md.length) txt += ` · marcadas (con duda): ${okM}/${md.length}`;
+        der.append(el("p.peq", txt));
+        const fs = nm.length - okN;
+        if (fs) der.append(el("p.peq.c-trampa", `${fs} fallo(s) sin marcar: respondiste sin dudar y no era. Son los que más cuestan; revísalos primero.`));
+        if (md.length >= 5) der.append(el("p.suave.peq", md.length && okM / md.length > 0.2
+          ? "Con tus dudas aciertas más del 20 %: en el examen te compensa contestarlas."
+          : "Con tus dudas aciertas menos del 20 %: en el examen, déjalas en blanco."));
+      }
     }
     if (r.fallos) der.append(el("p.suave.peq", `Si esas ${r.fallos} preguntas falladas las hubieras dejado en blanco, tendrías ${num(r.neta + r.puntos_perdidos_fallos, 2)} puntos.`));
     main.append(tarjeta("fila-opcion bg-" + col + "_bg",
@@ -395,7 +412,8 @@ export function desglose(sim, d) {
       const letra = "ABCD"[idx];
       const cls = letra === q.correcta ? ".bien" : letra === d.elegida ? ".mal" : "";
       const pre = letra === q.correcta ? "✔ " : letra === d.elegida ? "✘ " : "";
-      caja.append(el("div.opcion.estatica" + cls, `${pre}${"ABCD"[pos]})  ${limpia(q.opciones[idx])}`));
+      caja.append(el("div.opcion.estatica" + cls, `${pre}${"ABCD"[pos]})  ${limpia(q.opciones[idx])}`,
+        idx !== pos ? el("span.orig", ` · ${letra} en el original`) : null));
     });
     cont.append(caja);
     let n = 1;

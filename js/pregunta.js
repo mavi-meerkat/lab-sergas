@@ -14,15 +14,26 @@ export function verRecorte(rec, titulo = "Recorte literal del manual") {
 
 const limpia = (s) => s.replace(/^[A-D]\)\s*/, "");
 
+const CERTEZAS = [
+  ["segura", "✔ Segura", "ok", "Enter"],
+  ["duda", "🤔 Dudo", "aviso", "Espacio"],
+  ["azar", "🎲 Al azar", "secundario", "Z"],
+];
+const seg = (ms) => Math.round(ms / 1000);
+
 /**
- * opts: { onFin(correcta), contexto, valorar=true, onRespuesta(correcta) }
+ * opts: { onFin(correcta, res), contexto, valorar=true, onRespuesta(correcta), certeza (preguntar seguridad),
+ *         limite (segundos: modo Reflejos) }
+ * Flujo: se elige opción → se dice cómo de segura → corrección. Así se entrena responder sin dudar.
  */
 export function bloquePregunta(qid, opts = {}) {
-  const { onFin, contexto = "tutor", valorar = true, onRespuesta } = opts;
+  const { onFin, contexto = "tutor", valorar = true, onRespuesta, limite = null } = opts;
+  const preguntarCerteza = opts.certeza ?? A.p.get("preguntar_certeza", true);
   const q = A.c.preguntas[qid];
   const est = A.p.estado(qid);
   const orden = A.m.ordenOpciones(qid);
-  let resuelta = false;
+  const t0 = performance.now();
+  let resuelta = false, seleccion = null, reloj = null;
   const raiz = el("div.pregunta");
 
   const meta = el("div.meta");
@@ -37,39 +48,89 @@ export function bloquePregunta(qid, opts = {}) {
   else if (q.alerta) meta.append(chip("⚠ Fuera del temario base · respuesta propuesta", "mal", "mal_bg"));
   else if (qid in A.c.validaciones.datos()) meta.append(chip("🚩 En revisión", "aviso", "aviso_bg"));
   if (est.alerta_trampa) meta.append(chip("⚠ ALERTA TRAMPA · opciones reordenadas", "aviso", "aviso_bg"));
-  raiz.append(meta, rico(q.enunciado, "enunciado"));
+  if ((est.confirmar || 0) > 0) meta.append(chip("🎯 Error seguro por corregir", "mal", "mal_bg"));
+  else if (est.dominada) meta.append(chip("🏅 Dominada sin dudas", "ok", "ok_bg"));
+  raiz.append(meta);
+
+  let barraTiempo = null;
+  if (limite) {
+    barraTiempo = el("div.barra.reflejo", el("div", { style: { width: "100%" } }));
+    raiz.append(barraTiempo);
+  }
+  raiz.append(rico(q.enunciado, "enunciado"));
 
   const botones = [];
   const lista = el("div.opciones");
   orden.forEach((idx, pos) => {
     const b = el("button.opcion", { type: "button" }, el("b", "ABCD"[pos] + ")"), " ", limpia(q.opciones[idx]));
-    b.onclick = () => elegir(idx);
+    b.onclick = () => tocar(idx);
     botones.push([idx, b]);
     lista.append(b);
   });
   raiz.append(lista);
+  const zonaCerteza = el("div.zona-certeza");
   const zona = el("div.zona-fb");
-  raiz.append(zona);
+  raiz.append(zonaCerteza, zona);
 
-  function elegir(idx) {
+  function tocar(idx) {
+    if (resuelta) return;
+    if (!preguntarCerteza) return elegir(idx, null);
+    seleccion = idx;
+    for (const [i, b] of botones) b.classList.toggle("sel", i === idx);
+    if (!zonaCerteza.firstChild) {
+      zonaCerteza.append(el("div.certeza",
+        el("span.suave.peq", "¿Cómo de segura estás?"),
+        ...CERTEZAS.map(([val, txt, tipo, tecla]) =>
+          boton(txt, () => confirmar(val), tipo + " certeza-btn", { "data-certeza": val, title: "Tecla: " + tecla }))));
+    }
+  }
+  function confirmar(cert) {
+    if (resuelta || seleccion === null) return;
+    elegir(seleccion, cert);
+  }
+
+  function elegir(idx, certeza) {
     if (resuelta) return;
     resuelta = true;
-    const letra = "ABCD"[idx];
-    const res = A.m.responder(qid, letra, contexto);
+    if (reloj) clearInterval(reloj);
+    zonaCerteza.replaceChildren();
+    const ms = performance.now() - t0;
+    const letra = idx === null ? null : "ABCD"[idx];
+    const res = A.m.responder(qid, letra, contexto, { certeza, ms });
     const cIdx = "ABCD".indexOf(q.correcta);
+    const barajada = orden.some((v, k) => v !== k);
     for (const [i, b] of botones) {
       b.disabled = true;
+      b.classList.remove("sel");
+      // la explicación usa las letras originales: se indican si el orden se ha cambiado
+      if (barajada) b.append(el("span.orig", ` · ${"ABCD"[i]} en el original`));
       if (i === cIdx) b.classList.add("bien");
       else if (i === idx) b.classList.add("mal");
     }
-    const caja = tarjeta(res.correcta ? "bg-ok_bg" : "bg-mal_bg");
-    caja.append(el("div.fb-tit" + (res.correcta ? ".c-ok" : ".c-mal"), res.correcta ? "✔  ¡Correcto!" : "✘  No es esa"));
-    if (res.alerta_trampa_nueva) {
-      caja.append(el("p.c-aviso.peq", "⚠ Has caído dos veces en el mismo distractor: queda marcada como ALERTA TRAMPA y la próxima vez cambiaré el orden de las opciones."));
-    }
+    const bueno = res.correcta && !res.suerte;
+    const caja = tarjeta(res.error_seguro ? "bg-trampa_bg" : res.correcta ? (bueno && !res.duda ? "bg-ok_bg" : "bg-aviso_bg") : "bg-mal_bg");
+    let titulo, cls;
+    if (idx === null) { titulo = "⏱  Se acabó el tiempo"; cls = ".c-mal"; }
+    else if (res.error_seguro) { titulo = "✘  Error seguro: estabas convencida y no era"; cls = ".c-trampa"; }
+    else if (!res.correcta) { titulo = "✘  No es esa"; cls = ".c-mal"; }
+    else if (res.suerte) { titulo = "✔  Correcta… pero al azar"; cls = ".c-aviso"; }
+    else if (res.duda) { titulo = "✔  Correcta, pero dudabas"; cls = ".c-aviso"; }
+    else { titulo = res.dominada ? "🏅  ¡Dominada sin dudas!" : "✔  ¡Correcto!"; cls = ".c-ok"; }
+    caja.append(el("div.fb-tit" + cls, titulo, certeza ? el("span.suave.peq.tiempo", ` · ${seg(ms)} s`) : null));
+
+    const avisos = [];
+    if (res.error_seguro) avisos.push("Es el error más caro del examen: lo contestarías sin dudar y restaría. Lee bien la explicación; esta pregunta volverá hasta que la aciertes **segura " + res.confirmar + " veces seguidas**.");
+    else if (res.suerte) avisos.push("Acertar por suerte no es saberla: no cuenta como aprendida y vuelve mañana.");
+    else if (res.duda) avisos.push(res.confirmar ? "Sigue en corrección: necesitas acertarla **segura**." : "Vuelve en 2 días para fijarla. Cuando la contestes segura y rápido, el algoritmo la espaciará.");
+    else if (res.correcta && res.confirmar > 0) avisos.push(`Bien corregida. Falta **${res.confirmar}** confirmación más para darla por superada.`);
+    else if (res.correcta && res.lento) avisos.push(`Has tardado ${seg(ms)} s: aún no sale sola, así que no se permite «Fácil». En el examen tienes ~80 s por pregunta, pero las que dominas deben salir en segundos.`);
+    else if (res.dominada) avisos.push("Tres veces seguidas segura y rápida: ya es un reflejo.");
+    if (res.alerta_trampa_nueva) avisos.push("⚠ Has caído dos veces en el mismo distractor: queda marcada como ALERTA TRAMPA y la próxima vez cambiaré el orden de las opciones.");
+    for (const a of avisos) caja.append(rico(a, "peq aviso-fb"));
     caja.append(rico(q.explicacion_rapida || ""));
+
     const fila = el("div.fila.envuelve");
-    if (q.recorte_teorico) fila.append(boton("📖  Ver recorte del manual", () => verRecorte(q.recorte_teorico), res.correcta ? "secundario" : "aviso"));
+    if (q.recorte_teorico) fila.append(boton("📖  Ver recorte del manual", () => verRecorte(q.recorte_teorico), bueno ? "secundario" : "aviso"));
     if (!A.c.porValidar(qid)) {
       const bf = boton("🚩", () => {
         A.c.validaciones.marcar(qid);
@@ -79,21 +140,63 @@ export function bloquePregunta(qid, opts = {}) {
       }, "fantasma", { title: "Enviar a revisión: creo que la respuesta está mal" });
       fila.append(bf);
     }
-    if (res.correcta && valorar) {
+    if (res.valorar && valorar) {
       const pv = A.m.previsiones(qid);
       fila.append(el("span.suave.peq.sep", "¿Cómo te ha resultado?"));
-      for (const [txt, val, tipo] of [[`Difícil · ${pv.dificil} d`, "dificil", "secundario"], [`Bien · ${pv.bien} d`, "bien", "secundario"], [`Fácil · ${pv.facil} d`, "facil", "ok"]]) {
-        fila.append(boton(txt, () => { A.m.valorar(qid, val); onFin && onFin(true); }, tipo, { "data-val": val }));
+      const opcionesV = [[`Difícil · ${pv.dificil} d`, "dificil", "secundario"], [`Bien · ${pv.bien} d`, "bien", "secundario"]];
+      if (!res.lento) opcionesV.push([`Fácil · ${pv.facil} d`, "facil", "ok"]);
+      for (const [txt, val, tipo] of opcionesV) {
+        fila.append(boton(txt, () => { A.m.valorar(qid, val); onFin && onFin(true, res); }, tipo, { "data-val": val }));
       }
     } else {
-      if (!res.correcta) fila.append(el("span.suave.peq.sep", "Vuelve a la cola de emergencia: la repetirás en esta sesión y mañana."));
-      fila.append(el("span.flex1"), boton("Continuar →", () => onFin && onFin(res.correcta), "primario", { "data-continuar": "1" }));
+      if (!res.correcta || res.suerte) fila.append(el("span.suave.peq.sep", opts.reinsertar === false ? "Vuelve mañana en la cola de emergencia." : "Vuelve a la cola de emergencia: la repetirás en esta sesión y mañana."));
+      fila.append(el("span.flex1"), boton("Continuar →", () => onFin && onFin(bueno, res), "primario", { "data-continuar": "1" }));
     }
     caja.append(fila);
     zona.append(caja);
-    if (onRespuesta) { try { onRespuesta(res.correcta); } catch (e) { console.error(e); } }
+    if (onRespuesta) { try { onRespuesta(res.correcta, res); } catch (e) { console.error(e); } }
     setTimeout(() => caja.scrollIntoView({ behavior: "smooth", block: "nearest" }), 30);
   }
-  raiz.elegirVisible = (pos) => { if (!resuelta && botones[pos]) elegir(botones[pos][0]); };
+
+  if (limite) {
+    const fin = t0 + limite * 1000;
+    reloj = setInterval(() => {
+      if (!raiz.isConnected && performance.now() - t0 > 2000) { clearInterval(reloj); return; }
+      const resto = fin - performance.now();
+      const f = barraTiempo.firstChild;
+      f.style.width = Math.max(0, (resto / (limite * 1000)) * 100) + "%";
+      f.style.background = resto < 5000 ? "var(--mal)" : resto < 10000 ? "var(--aviso)" : "var(--acento)";
+      if (resto <= 0) {
+        clearInterval(reloj);
+        // sin respuesta = no salió; con opción marcada pero sin confirmar = dudaba
+        if (seleccion === null) elegir(null, "duda"); else elegir(seleccion, "duda");
+      }
+    }, 100);
+  }
+
+  raiz.elegirVisible = (pos) => { if (!resuelta && botones[pos]) tocar(botones[pos][0]); };
+  raiz.confirmarCerteza = (cert) => { if (!resuelta && seleccion !== null) { confirmar(cert); return true; } return false; };
+  raiz.pendienteCerteza = () => !resuelta && seleccion !== null;
+  raiz.detener = () => { if (reloj) clearInterval(reloj); };
   return raiz;
+}
+
+/** Teclado común: A-D/1-4 eligen; Enter = segura, Espacio = dudo, Z = al azar; Enter continúa. */
+export function teclasPregunta(bloque, e) {
+  if (!bloque) return false;
+  if (/^[a-dA-D1-4]$/.test(e.key)) {
+    const pos = /\d/.test(e.key) ? Number(e.key) - 1 : "ABCD".indexOf(e.key.toUpperCase());
+    bloque.elegirVisible(pos);
+    return true;
+  }
+  if (bloque.pendienteCerteza && bloque.pendienteCerteza()) {
+    if (e.key === "Enter") return bloque.confirmarCerteza("segura");
+    if (e.key === " ") return bloque.confirmarCerteza("duda");
+    if (e.key === "z" || e.key === "Z") return bloque.confirmarCerteza("azar");
+  }
+  if (e.key === "Enter") {
+    const b = bloque.querySelector("[data-continuar]") || bloque.querySelector('[data-val="bien"]');
+    if (b) { b.click(); return true; }
+  }
+  return false;
 }

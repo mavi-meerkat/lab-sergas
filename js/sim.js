@@ -227,13 +227,17 @@ export class Simulacros {
     const sim = this.cargar(id);
     if (sim.estado === "entregado") return sim.resumen;
     const res = this.corregir(sim);
+    const marc = new Set(sim.marcadas || []);
     for (const d of res.detalle) {
-      if (d.res === "fallo") this.m.responder(d.q, d.elegida, "simulacro");
+      // las marcadas para revisar son las que dudabas: alimentan el entrenamiento de la seguridad
+      const dudada = marc.has(d.i);
+      if (d.res === "fallo") this.m.responder(d.q, d.elegida, "simulacro", { certeza: dudada ? "duda" : null });
       else if (d.res === "acierto") {
         const q = this.c.preguntas[d.q];
         const e = this.p.estado(d.q);
-        this.p.registrarRespuesta(d.q, q.unidad, true, d.elegida, "simulacro");
+        this.p.registrarRespuesta(d.q, q.unidad, true, d.elegida, "simulacro", { certeza: dudada ? "duda" : null });
         this.p.actualizar(d.q, { aciertos: e.aciertos + 1 });
+        if (dudada) this.m.aciertoDudoso(d.q);
       }
     }
     this.p.actualizarSim(id, {

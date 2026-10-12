@@ -12,6 +12,14 @@ export const ESCALERA_FACIL = [7, 14, 30, 60];
 export const FACTOR_MIN = 1.3;
 export const DIAS_CONSOLIDADA = 21;
 export const NUEVAS_POR_DIA_DEFECTO = 20;
+// Seguridad al responder
+export const RACHA_DOMINIO = 3;              // aciertos seguros y rápidos seguidos = dominada sin dudas
+export const CONFIRMACIONES_ERROR_SEGURO = 2; // aciertos seguros seguidos para dar por corregido un error seguro
+export const LENTO_BASE_MS = 25000;          // por encima: todavía no es automático
+export const LENTO_MIN_MS = 15000, LENTO_MAX_MS = 45000;
+export const TAM_REFLEJOS = 15;
+export const SEGUNDOS_REFLEJOS = 20;
+export const UMBRAL_RENTABLE = 0.2;          // +0,5·p − 0,125·(1−p) > 0  ⇔  p > 20 %
 
 export class Motor {
   constructor(contenido, store) {
@@ -177,32 +185,104 @@ export class Motor {
     return orden;
   }
 
-  // ------------------------------------------------ SM-2 modificado
-  responder(qid, elegida, contexto = "tutor") {
+  // ------------------------------------------------ SM-2 modificado + entrenamiento de la seguridad
+  //
+  // Además de acertar, se entrena responder SIN DUDAR. Cada respuesta lleva:
+  //   certeza: "segura" | "duda" | "azar" | null (null = no se preguntó)
+  //   ms: tiempo de respuesta
+  // Reglas:
+  //   · acierto «al azar» -> no cuenta como aprendido: vuelve mañana (cola de emergencia).
+  //   · acierto dudando     -> intervalo corto (2 días) sin valoración: aún no es firme.
+  //   · acierto seguro pero lento -> no se permite «Fácil»: todavía no es automático.
+  //   · fallo estando segura (error seguro) -> la idea equivocada está asentada: penalización
+  //     mayor y hacen falta CONFIRMACIONES_ERROR_SEGURO aciertos seguros seguidos para soltarla.
+  //   · «Dominada sin dudas» = RACHA_DOMINIO aciertos seguros y rápidos seguidos.
+  umbralLento(qid) {
+    const e = this.p.estado(qid);
+    const propio = e.t_med ? e.t_med * 1.8 : 0;
+    return Math.max(LENTO_MIN_MS, Math.min(LENTO_MAX_MS, propio || LENTO_BASE_MS));
+  }
+
+  responder(qid, elegida, contexto = "tutor", { certeza = null, ms = null } = {}) {
     const q = this.c.preguntas[qid];
     const e = this.p.estado(qid);
     const correcta = elegida === q.correcta;
     const ahora = ahoraISO();
     if (e.estado === "nuevo") this.p.sumarDiario("nuevas");
-    this.p.registrarRespuesta(qid, q.unidad, correcta, elegida, contexto);
-    const res = { correcta, alerta_trampa_nueva: false, proxima: null };
+    this.p.registrarRespuesta(qid, q.unidad, correcta, elegida, contexto, { certeza, ms });
+    const res = { correcta, certeza, alerta_trampa_nueva: false, proxima: null, valorar: correcta, lento: false,
+      suerte: false, duda: false, error_seguro: false, confirmar: 0, dominada: false };
+    const cambios = { vista: ahora, ult_certeza: certeza };
+    if (ms && correcta && certeza !== "azar") {
+      // media móvil del tiempo de las respuestas acertadas (la «velocidad de recuerdo» de esa pregunta)
+      cambios.t_med = Math.round(e.t_med ? e.t_med * 0.6 + ms * 0.4 : ms);
+    }
     if (correcta) {
-      // una pregunta nunca vista que se acierta pasa a «aprendizaje» al valorarla
-      this.p.actualizar(qid, { aciertos: e.aciertos + 1, vista: ahora });
+      cambios.aciertos = e.aciertos + 1;
+      if (certeza === "azar") {
+        // acertar por suerte no es saber: se trata como un fallo «blando» (sin castigar el distractor)
+        Object.assign(cambios, {
+          factor: Math.max(FACTOR_MIN, e.factor - 0.1), intervalo: 0, escalon_facil: 0, estado: "aprendizaje",
+          emergencia: 1, proxima: sumarDias(hoy(), 1), seg: 0, suertes: (e.suertes || 0) + 1,
+        });
+        res.suerte = true; res.valorar = false; res.proxima = hoy();
+      } else if (certeza === "duda") {
+        Object.assign(cambios, {
+          intervalo: INTERVALO_DIFICIL, factor: Math.max(FACTOR_MIN, e.factor - 0.05), escalon_facil: 0,
+          estado: "aprendizaje", emergencia: 0, proxima: sumarDias(hoy(), INTERVALO_DIFICIL), seg: 0,
+        });
+        if ((e.confirmar || 0) > 0) Object.assign(cambios, { emergencia: 1, proxima: sumarDias(hoy(), 1), intervalo: 0 });
+        res.duda = true; res.valorar = false; res.proxima = cambios.proxima; res.confirmar = e.confirmar || 0;
+      } else {
+        const lento = ms !== null && ms > this.umbralLento(qid);
+        res.lento = lento;
+        const seg = certeza === "segura" && !lento ? (e.seg || 0) + 1 : certeza === "segura" ? (e.seg || 0) : 0;
+        cambios.seg = seg;
+        if (seg >= RACHA_DOMINIO && !e.dominada) { cambios.dominada = 1; res.dominada = true; }
+        if ((e.confirmar || 0) > 0 && certeza !== null) {
+          // tras un error seguro hay que demostrar varias veces seguidas que ya está corregido
+          const quedan = certeza === "segura" ? e.confirmar - 1 : e.confirmar;
+          cambios.confirmar = quedan;
+          res.confirmar = quedan;
+          if (quedan > 0) {
+            Object.assign(cambios, { emergencia: 1, proxima: sumarDias(hoy(), 1), intervalo: 0 });
+            res.valorar = false; res.proxima = cambios.proxima;
+          }
+        }
+      }
     } else {
       const mismo = e.ultimo_distractor === elegida;
       const rep = mismo ? e.repeticion_distractor + 1 : 1;
       const alerta = e.alerta_trampa || rep >= 2;
       res.alerta_trampa_nueva = !!(alerta && !e.alerta_trampa);
-      this.p.actualizar(qid, {
-        fallos: e.fallos + 1, factor: Math.max(FACTOR_MIN, e.factor - 0.2),
+      const seguro = certeza === "segura";
+      res.error_seguro = seguro;
+      Object.assign(cambios, {
+        fallos: e.fallos + 1, factor: Math.max(FACTOR_MIN, e.factor - (seguro ? 0.3 : 0.2)),
         intervalo: 0, escalon_facil: 0, estado: "aprendizaje", emergencia: 1,
         proxima: sumarDias(hoy(), 1), ultimo_distractor: elegida, repeticion_distractor: rep,
-        alerta_trampa: alerta ? 1 : 0, vista: ahora,
+        alerta_trampa: alerta ? 1 : 0, seg: 0, dominada: 0,
       });
+      if (seguro) {
+        cambios.err_seguro = (e.err_seguro || 0) + 1;
+        cambios.confirmar = CONFIRMACIONES_ERROR_SEGURO;
+        res.confirmar = CONFIRMACIONES_ERROR_SEGURO;
+      }
       res.proxima = hoy();
+      res.valorar = false;
     }
+    if (cambios.factor !== undefined) cambios.factor = Math.round(cambios.factor * 1000) / 1000;
+    this.p.actualizar(qid, cambios);
     return res;
+  }
+
+  /** Simulacro: una pregunta acertada pero marcada para revisar se trata como acierto dudando. */
+  aciertoDudoso(qid) {
+    const e = this.p.estado(qid);
+    const corto = sumarDias(hoy(), INTERVALO_DIFICIL);
+    const cambios = { seg: 0, ult_certeza: "duda", vista: ahoraISO() };
+    if (!e.proxima || e.proxima > corto) Object.assign(cambios, { proxima: corto, intervalo: INTERVALO_DIFICIL, estado: "aprendizaje" });
+    this.p.actualizar(qid, cambios);
   }
 
   /** Días que daría cada botón tras un acierto (para mostrarlo en el botón). */
@@ -235,6 +315,78 @@ export class Motor {
     const estado = intervalo >= DIAS_CONSOLIDADA ? "consolidada" : "aprendizaje";
     this.p.actualizar(qid, { factor, intervalo, escalon_facil: escalon, estado, proxima, emergencia: 0, ult_valoracion: valoracion });
     return proxima;
+  }
+
+  // ------------------------------------------------ seguridad y calibración
+  /** Cómo de fiable es la sensación de seguridad: % de acierto según lo segura que dijo estar. */
+  calibracion(ultimas = 400) {
+    const r = this.p.respuestas().filter((x) => x.k).slice(-ultimas);
+    const g = { s: [0, 0], d: [0, 0], a: [0, 0] };
+    const tiempos = [];
+    for (const x of r) {
+      if (!g[x.k]) continue;
+      g[x.k][0] += 1; g[x.k][1] += x.c;
+      if (x.k === "s" && x.c && x.ms) tiempos.push(x.ms);
+    }
+    const pct = ([n, ok]) => (n ? ok / n : null);
+    tiempos.sort((a, b) => a - b);
+    return {
+      n: r.length,
+      segura: { n: g.s[0], pct: pct(g.s) }, duda: { n: g.d[0], pct: pct(g.d) }, azar: { n: g.a[0], pct: pct(g.a) },
+      // acierto sin dudas: segura y correcta sobre el total con certeza declarada
+      sin_dudas: r.length ? g.s[1] / r.length : null,
+      t_mediano: tiempos.length ? tiempos[Math.floor(tiempos.length / 2)] : null,
+    };
+  }
+  /** Consejo de estrategia para el examen real (+0,5 / −0,125): contestar compensa si se acierta más del 20 %. */
+  consejoExamen(cal = this.calibracion()) {
+    const out = [];
+    const f = (x) => Math.round(x * 100) + " %";
+    if (cal.segura.n >= 15 && cal.segura.pct < 0.85)
+      out.push(`Cuando te sientes segura aciertas el ${f(cal.segura.pct)}: hay ideas mal fijadas que parecen ciertas. Prioriza los «errores seguros».`);
+    if (cal.duda.n >= 10)
+      out.push(cal.duda.pct > UMBRAL_RENTABLE
+        ? `Dudando aciertas el ${f(cal.duda.pct)}: en el examen te compensa contestar (rentable a partir del 20 %).`
+        : `Dudando solo aciertas el ${f(cal.duda.pct)}: en el examen, si dudas de verdad, mejor en blanco.`);
+    if (cal.azar.n >= 10)
+      out.push(cal.azar.pct > UMBRAL_RENTABLE
+        ? `Incluso «al azar» aciertas el ${f(cal.azar.pct)}: tu intuición descarta bien; si eliminas al menos una opción, arriesga.`
+        : `Al azar aciertas el ${f(cal.azar.pct)}: sin descartar nada, deja la pregunta en blanco.`);
+    return out;
+  }
+  erroresSeguros() {
+    return Object.entries(this.p.p).filter(([q, e]) => this.c.preguntas[q] && (e.confirmar || 0) > 0).map(([q]) => q);
+  }
+  recuentoSeguridad() {
+    let dominadas = 0, inseguras = 0, errores = 0;
+    for (const [q, e] of Object.entries(this.p.p)) {
+      if (!this.c.preguntas[q] || !e.estado || e.estado === "nuevo") continue;
+      if ((e.confirmar || 0) > 0) errores++;
+      else if (e.dominada) dominadas++;
+      else if (e.ult_certeza === "duda" || e.ult_certeza === "azar") inseguras++;
+    }
+    return { dominadas, inseguras, errores };
+  }
+  /**
+   * Entrenamiento «Reflejos»: preguntas ya vistas que aún no salen solas (errores seguros, aciertos con duda o
+   * por suerte, respuestas lentas). Se responden contra reloj para automatizar el recuerdo.
+   */
+  colaReflejos(n = TAM_REFLEJOS) {
+    const cand = [];
+    for (const [qid, e] of Object.entries(this.p.p)) {
+      const q = this.c.preguntas[qid];
+      if (!q || q.anulada || !e.estado || e.estado === "nuevo") continue;
+      let p = 0;
+      if ((e.confirmar || 0) > 0) p += 5;
+      if (e.ult_certeza === "azar") p += 4;
+      if (e.ult_certeza === "duda") p += 3;
+      if (e.t_med && e.t_med > LENTO_BASE_MS) p += 2;
+      if (!e.dominada && e.aciertos > 0) p += 1;
+      if (e.dominada) p -= 3;
+      if (p > 0) cand.push([qid, p + azar() * 1.5]);
+    }
+    cand.sort((a, b) => b[1] - a[1]);
+    return azar.shuffle(cand.slice(0, n).map((x) => x[0]));
   }
 
   // ------------------------------------------------ estadísticas

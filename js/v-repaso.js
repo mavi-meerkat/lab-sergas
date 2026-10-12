@@ -1,12 +1,13 @@
 // Vista Repaso (modo Tutor): cola del día, sesión de choque, micro-bloques y listas.
 import { A } from "./ctx.js";
 import { el, boton, tarjeta, barra, confirmar, aviso } from "./ui.js";
-import { bloquePregunta } from "./pregunta.js";
-import { TAM_SESION_CHOQUE } from "./engine.js";
+import { bloquePregunta, teclasPregunta } from "./pregunta.js";
+import { TAM_SESION_CHOQUE, SEGUNDOS_REFLEJOS, TAM_REFLEJOS } from "./engine.js";
 
 export function vistaRepaso(main, { modo = null, unidad = null, ids = null } = {}) {
   const { m, p, c } = A;
   let cola = [], reintentos = new Set(), aciertos = 0, total = 0, modoActual = modo;
+  let sinDudas = 0, tiempos = [];
   let bloque = null;
   const ctl = { nombre: "repaso", refrescarRemoto: false, teclas: null };
 
@@ -32,6 +33,15 @@ export function vistaRepaso(main, { modo = null, unidad = null, ids = null } = {
     const tam = p.get("tam_sesion", 10);
     opcion(`Micro-bloque de ${tam} preguntas nuevas`, bloqueo || "Preguntas aún no vistas de las unidades que ya te ha enseñado el Profesor.",
       "Empezar", () => empezar("nuevas"), "primario", !bloqueo);
+    const errS = m.erroresSeguros();
+    if (errS.length) opcion(`🎯 Errores seguros (${errS.length})`, "Preguntas que fallaste estando convencida. Cada una necesita dos aciertos seguros seguidos para darse por corregida.",
+      "Corregirlos", () => empezar("errores"), "mal", true, "trampa_bg");
+    const nRef = m.colaReflejos().length;
+    opcion(`⚡ Reflejos · ${SEGUNDOS_REFLEJOS} s por pregunta`, nRef
+      ? `Hasta ${TAM_REFLEJOS} preguntas que aún no te salen solas (las acertaste dudando, por suerte o despacio). Contra reloj para automatizarlas.`
+      : "Aparecerán aquí las preguntas que aciertes dudando, por suerte o despacio.",
+      "Entrenar", () => empezar("reflejos"), "aviso", nRef > 0);
+    main.append(panelSeguridad());
     if (bloqueo && m.paseDisponible()) {
       main.append(el("div.fila.envuelve", el("span.suave.peq", "¿Hoy no puedes cumplir? Tienes 1 pase de emergencia al día."),
         boton("Usar pase de emergencia", async () => {
@@ -48,6 +58,8 @@ export function vistaRepaso(main, { modo = null, unidad = null, ids = null } = {
     if (md === "cola") cola = m.colaDelDia().slice(0, Math.max(tam, 15));
     else if (md === "choque") cola = m.sesionChoque(uid);
     else if (md === "lista") cola = (ids || []).filter((q) => q in c.preguntas);
+    else if (md === "errores") cola = m.erroresSeguros().slice(0, Math.max(tam, 15));
+    else if (md === "reflejos") cola = m.colaReflejos();
     else {
       cola = m.preguntasNuevas(tam);
       if (!cola.length) {
@@ -57,7 +69,8 @@ export function vistaRepaso(main, { modo = null, unidad = null, ids = null } = {
       }
     }
     modoActual = md;
-    aciertos = total = 0;
+    aciertos = total = sinDudas = 0;
+    tiempos = [];
     reintentos = new Set();
     ctl.refrescarRemoto = false;
     siguiente();
@@ -67,23 +80,50 @@ export function vistaRepaso(main, { modo = null, unidad = null, ids = null } = {
     main.replaceChildren();
     if (!cola.length) return fin();
     const qid = cola.shift();
-    const nombre = { cola: "Cola del día", choque: "Sesión de choque", nuevas: "Micro-bloque", lista: "Repaso de fallos del simulacro" }[modoActual];
+    const nombre = { cola: "Cola del día", choque: "Sesión de choque", nuevas: "Micro-bloque", lista: "Repaso de fallos del simulacro",
+      errores: "Corregir errores seguros", reflejos: "⚡ Reflejos" }[modoActual];
     main.append(el("div.fila.entre",
       el("div.fila", boton("← Salir", menu, "fantasma"), el("h2", nombre)),
       el("span.suave.peq", `${total} respondidas · quedan ${cola.length + 1}`)),
       barra(total / Math.max(1, total + cola.length + 1)));
-    bloque = bloquePregunta(qid, { onFin: (ok) => resuelta(qid, ok) });
+    const reflejos = modoActual === "reflejos";
+    bloque = bloquePregunta(qid, {
+      onFin: (ok) => resuelta(qid, ok, reflejos),
+      onRespuesta: (ok, res) => { if (ok && res.certeza === "segura" && !res.lento) sinDudas += 1; },
+      limite: reflejos ? SEGUNDOS_REFLEJOS : null, certeza: reflejos ? true : undefined,
+      contexto: reflejos ? "reflejos" : "tutor", reinsertar: !reflejos,
+    });
     main.append(tarjeta("", bloque));
     A.main.scrollTop = 0;
   }
-  function resuelta(qid, ok) {
+  function resuelta(qid, ok, sinReinsertar = false) {
     total += 1;
     aciertos += ok ? 1 : 0;
-    if (!ok && !reintentos.has(qid)) {
+    if (!ok && !reintentos.has(qid) && !sinReinsertar) {
       reintentos.add(qid);
       cola.splice(Math.min(cola.length, 3), 0, qid);
     }
     siguiente();
+  }
+
+  function panelSeguridad() {
+    const cal = m.calibracion();
+    const rs = m.recuentoSeguridad();
+    const f = (x) => (x === null ? "—" : Math.round(x * 100) + " %");
+    const caja = tarjeta("", el("h3", "🧠 Seguridad al responder"),
+      el("p.suave.peq", "Tras elegir opción dices si estás segura, dudas o vas al azar. Así el algoritmo distingue «lo sé» de «me ha sonado» y entrena que la respuesta salga sola."));
+    if (cal.n < 10) {
+      caja.append(el("p.peq", "Aún hay pocas respuestas con seguridad declarada. Cuando tengas unas cuantas verás aquí tu calibración y un consejo para el examen."));
+      return caja;
+    }
+    caja.append(el("div.calib",
+      el("div", el("div.suave.peq", "Cuando estás segura aciertas"), el("div.big.c-ok", f(cal.segura.pct)), el("div.suave.peq", `${cal.segura.n} respuestas`)),
+      el("div", el("div.suave.peq", "Cuando dudas aciertas"), el("div.big.c-aviso", f(cal.duda.pct)), el("div.suave.peq", `${cal.duda.n} respuestas`)),
+      el("div", el("div.suave.peq", "Al azar aciertas"), el("div.big", f(cal.azar.pct)), el("div.suave.peq", `${cal.azar.n} respuestas`))));
+    caja.append(el("p.peq", `🏅 ${rs.dominadas} dominadas sin dudas · 🤔 ${rs.inseguras} inseguras · 🎯 ${rs.errores} errores seguros por corregir` +
+      (cal.t_mediano ? ` · tiempo típico de respuesta segura: ${Math.round(cal.t_mediano / 1000)} s` : "")));
+    for (const c of m.consejoExamen(cal)) caja.append(el("p.peq.c-acento", "💡 " + c));
+    return caja;
   }
   function fin() {
     bloque = null;
@@ -91,23 +131,12 @@ export function vistaRepaso(main, { modo = null, unidad = null, ids = null } = {
     main.append(tarjeta("bg-ok_bg",
       el("h2.c-ok", "Sesión terminada"),
       el("p", fallos ? `${fallos} pregunta(s) han ido a la cola de emergencia y volverán mañana.` : "Sin fallos. El algoritmo ha espaciado los próximos repasos."),
-      el("p.suave", `${aciertos} aciertos de ${total} respuestas.`),
+      el("p.suave", `${aciertos} aciertos de ${total} respuestas · ${sinDudas} sin dudas (seguras y rápidas).`),
       el("div.fila", boton("Volver al inicio", () => A.ir("inicio"), "primario"), boton("Otra sesión", menu, "secundario"))));
   }
 
-  ctl.teclas = (e) => {
-    if (!bloque) return false;
-    if (/^[a-dA-D1-4]$/.test(e.key)) {
-      const pos = /\d/.test(e.key) ? Number(e.key) - 1 : "ABCD".indexOf(e.key.toUpperCase());
-      bloque.elegirVisible(pos);
-      return true;
-    }
-    if (e.key === "Enter") {
-      const b = bloque.querySelector("[data-continuar]") || bloque.querySelector('[data-val="bien"]');
-      if (b) { b.click(); return true; }
-    }
-    return false;
-  };
+  ctl.teclas = (e) => teclasPregunta(bloque, e);
+  ctl.destruir = () => { if (bloque && bloque.detener) bloque.detener(); };
   ctl.refrescar = () => { if (ctl.refrescarRemoto) menu(); };
 
   if (modo) empezar(modo, unidad);

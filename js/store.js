@@ -123,9 +123,13 @@ export class Store {
     }
     return this._resp;
   }
-  registrarRespuesta(qid, unidad, correcta, elegida, contexto) {
+  registrarRespuesta(qid, unidad, correcta, elegida, contexto, { certeza = null, ms = null } = {}) {
     const t = ahoraISO();
     const item = { id: Math.random().toString(36).slice(2, 10), t, q: qid, u: unidad || null, c: correcta ? 1 : 0, e: elegida || null, x: contexto };
+    // k: certeza declarada (s = segura, d = duda, a = al azar); ms: tiempo de respuesta
+    const k = { segura: "s", duda: "d", azar: "a" }[certeza];
+    if (k) item.k = k;
+    if (ms) item.ms = Math.min(600000, Math.round(ms / 100) * 100);
     const dia = t.slice(0, 10);
     (this.respDia[dia] ||= []).push(item);
     this._resp = null;

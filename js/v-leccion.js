@@ -1,7 +1,7 @@
 // Vista Lección (modo Profesor): tarjetas guiadas, modo clase con audio y resumen imprimible.
 import { A, TIPOS_TARJETA } from "./ctx.js";
 import { el, boton, tarjeta, rico, barra, segmentado, aviso } from "./ui.js";
-import { bloquePregunta, verRecorte } from "./pregunta.js";
+import { bloquePregunta, verRecorte, teclasPregunta } from "./pregunta.js";
 import { esc, md, mdInline } from "./util.js";
 
 export function audioUrl(hash) { return `audio/${hash}.ogg`; }
@@ -265,10 +265,7 @@ export function vistaLeccion(main, { lid, inicio = null }) {
     teclas: (e) => {
       if (e.key === "ArrowRight") { sig(); return true; }
       if (e.key === "ArrowLeft") { ant(); return true; }
-      if (bloqueActual && /^[a-dA-D]$/.test(e.key) && bloqueActual.elegirVisible) {
-        bloqueActual.elegirVisible("ABCD".indexOf(e.key.toUpperCase()));
-        return true;
-      }
+      if (bloqueActual && bloqueActual.isConnected && teclasPregunta(bloqueActual, e)) return true;
       return false;
     },
   };

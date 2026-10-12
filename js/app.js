@@ -1,7 +1,7 @@
 // Arranque de LAB SERGAS (web): sesión, contenido cifrado, sincronización y navegación.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  getAuth, onAuthStateChanged, signInWithEmailAndPassword,
   sendPasswordResetEmail, signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
@@ -49,12 +49,6 @@ function pantallaLogin(error = "") {
     try { await signInWithEmailAndPassword(auth, email.value.trim(), pass.value); }
     catch (e) { msg.textContent = traducirError(e); }
   };
-  const crear = async () => {
-    msg.textContent = "";
-    if (pass.value.length < 6) { msg.textContent = "La contraseña debe tener al menos 6 caracteres."; return; }
-    try { await createUserWithEmailAndPassword(auth, email.value.trim(), pass.value); }
-    catch (e) { msg.textContent = traducirError(e); }
-  };
   const olvido = async () => {
     if (!email.value.trim()) { msg.textContent = "Escribe tu correo y vuelve a pulsar."; return; }
     try { await sendPasswordResetEmail(auth, email.value.trim()); msg.className = "c-ok peq"; msg.textContent = "Te he enviado un correo para cambiar la contraseña."; }
@@ -66,7 +60,7 @@ function pantallaLogin(error = "") {
     el("p.suave", "Entrenador de la oposición TSLCB. Entra con tu cuenta para sincronizar el progreso entre el ordenador y la tablet."),
     email, pass, msg,
     boton("Entrar", entrar, "primario grande ancho"),
-    el("div.fila.entre", boton("Crear cuenta (primera vez)", crear, "fantasma"), boton("He olvidado la contraseña", olvido, "fantasma")))));
+    el("div.fila.entre", el("span"), boton("He olvidado la contraseña", olvido, "fantasma")))));
   email.focus();
 }
 function traducirError(e) {

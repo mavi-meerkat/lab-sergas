@@ -181,6 +181,20 @@ h3.modulo { margin: 18px 0 6px; font-size: 17px; }
 .zona-fb { margin-top: 12px; }
 .fb-tit { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
 .sep { margin-left: 10px; }
+.zona-certeza:empty { display: none; }
+.certeza { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; padding: 10px 12px; border-radius: 12px;
+  background: var(--panel); border: 1px dashed var(--borde); animation: aparece .15s ease-out; }
+.certeza .certeza-btn { min-height: 44px; padding: 8px 16px; }
+@keyframes aparece { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.barra.reflejo { height: 8px; margin: 2px 0 10px; }
+.barra.reflejo > div { transition: width .1s linear; }
+.aviso-fb { margin: 2px 0 6px; }
+.tiempo { font-weight: 500; }
+.orig { color: var(--suave); font-size: 12.5px; font-style: italic; }
+.calib { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 10px 0; }
+.calib > div { background: var(--panel2); border-radius: 12px; padding: 10px 12px; }
+.calib .big { font-size: 24px; font-weight: 700; }
+@media (max-width: 600px) { .calib { grid-template-columns: 1fr; } }
 
 /* ------------------------------------------------------------------ examen */
 .cab-examen { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; position: sticky; top: var(--alto-top); background: var(--fondo); z-index: 6; padding: 6px 0; }

@@ -145,6 +145,8 @@ export function vistaAjustes(main) {
     }, "secundario"));
   fila("Tamaño de los micro-bloques", "Preguntas por sesión en el Modo Tutor.",
     segmentado(["10", "15"], String(p.get("tam_sesion", 10)), (v) => p.set("tam_sesion", Number(v))));
+  fila("Preguntar la seguridad", "Tras elegir opción: ✔ Segura · 🤔 Dudo · 🎲 Al azar. Entrena a responder sin dudar (recomendado).",
+    segmentado(["Sí", "No"], p.get("preguntar_certeza", true) ? "Sí" : "No", (v) => p.set("preguntar_certeza", v === "Sí")));
   fila("Apariencia", "Claro u oscuro.",
     segmentado(["Claro", "Oscuro"], p.get("tema", "Light") === "Dark" ? "Oscuro" : "Claro", (v) => A.cambiarTema(v === "Oscuro" ? "Dark" : "Light")));
   fila("Velocidad de la clase en audio", "Velocidad por defecto del modo clase.",
