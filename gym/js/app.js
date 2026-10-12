@@ -10,6 +10,8 @@ const mmss = (s) => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 6
 const num = (v) => { const n = parseFloat(String(v).replace(",", ".")); return isFinite(n) ? n : 0; };
 const fmtKg = (n) => (Math.round(n * 10) / 10).toString().replace(".", ",");
 const SERIE_SEG = 40; // tiempo estimado de trabajo por serie
+// Alternos (1 rep = los dos brazos) y unilaterales (todas las reps con una pierna y luego la otra) duran el doble.
+const segSerie = (e) => SERIE_SEG * (e && EJ[e.id]?.doble ? 2 : 1);
 const ICON = {
   hoy: '<path d="M4 9h16M8 3v4M16 3v4"/><rect x="4" y="5" width="16" height="16" rx="3"/><circle cx="12" cy="15" r="1.6" class="fillc"/>',
   plan: '<path d="M5 6h14M5 12h14M5 18h9"/>',
@@ -83,8 +85,8 @@ function barra(act) {
 // ---------- Estimación de tiempos ----------
 function estimar(s) {
   if (s.tipo === "cardio") return s.bloques.reduce((m, x) => m + x.min, 0) * 60;
-  const n = s.ejercicios.length, series = n * s.vol.series;
-  return series * SERIE_SEG + n * (s.vol.series - 1) * s.vol.descanso + (n - 1) * db.st().ajustes.cambioEj;
+  const n = s.ejercicios.length;
+  return s.ejercicios.reduce((m, e) => m + s.vol.series * segSerie(e), 0) + n * (s.vol.series - 1) * s.vol.descanso + (n - 1) * db.st().ajustes.cambioEj;
 }
 function repartoTxt(s) {
   if (s.tipo === "cardio") return `${s.bloques.length} bloques en cinta`;
@@ -309,7 +311,7 @@ function vFuerza(s, p) {
       <div class="etq">Ejercicio ${i + 1} de ${n} · ${esc(e.zona)}</div>
       <h2>${esc(e.nombre)}</h2>
       ${e.detalle ? `<p class="detalle">${esc(e.detalle)}</p>` : ""}${e.nota ? `<p class="intro">${esc(e.nota)}</p>` : ""}
-      <div class="pauta"><div><b>${p.vol.series}</b><span>series</span></div><div><b>${p.vol.reps}</b><span>reps</span></div><div><b>${p.vol.descansoTxt || p.vol.descanso + " s"}</b><span>descanso</span></div></div>
+      <div class="pauta"><div><b>${p.vol.series}</b><span>series</span></div><div><b>${p.vol.reps}</b><span>${e.doble === "pierna" ? "reps por pierna" : e.doble === "brazo" ? "reps (2 brazos)" : "reps"}</span></div><div><b>${p.vol.descansoTxt || p.vol.descanso + " s"}</b><span>descanso</span></div></div>
       ${ultTxt}
     </section>
     <section class="card series">${sinPeso ? `<p class="nota">Sin cargar peso: deja 0 kg (peso de la máquina).</p>` : ""}${filas}</section>
@@ -326,7 +328,7 @@ function estimarRestante(s, p) {
   p.ejercicios.forEach((e, k) => {
     const pend = (s.ej[k]?.series || []).filter((x) => x && x.hecho).length;
     const quedan = p.vol.series - pend;
-    if (quedan > 0) t += quedan * SERIE_SEG + Math.max(0, quedan - 1) * p.vol.descanso + (k > (s.idx ?? 0) ? db.st().ajustes.cambioEj : 0);
+    if (quedan > 0) t += quedan * segSerie(e) + Math.max(0, quedan - 1) * p.vol.descanso + (k > (s.idx ?? 0) ? db.st().ajustes.cambioEj : 0);
   });
   return t;
 }
