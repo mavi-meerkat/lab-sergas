@@ -19,6 +19,7 @@ import { vistaLeccion, audioUrl } from "./v-leccion.js";
 import { vistaRepaso } from "./v-repaso.js";
 import { vistaExamenes } from "./v-examenes.js";
 import { vistaValidar, vistaAjustes } from "./v-validar.js";
+import { vistaEntrena } from "./v-entrena.js";
 import { fechaEs, parseFechaEs, azar } from "./util.js";
 
 const fbApp = initializeApp(firebaseConfig);
@@ -177,7 +178,7 @@ function programarRefresco() {
 }
 
 // ------------------------------------------------------------------ esqueleto
-const NAV = [["inicio", "🏠", "Inicio"], ["profesor", "🎓", "Profesor"], ["repaso", "🔁", "Repaso"], ["examenes", "📝", "Simulacros"], ["validar", "🩺", "Por validar"], ["ajustes", "⚙", "Ajustes"]];
+const NAV = [["inicio", "🏠", "Inicio"], ["profesor", "🎓", "Profesor"], ["repaso", "🔁", "Repaso"], ["entrena", "🎮", "Entrena"], ["examenes", "📝", "Simulacros"], ["validar", "🩺", "Por validar"], ["ajustes", "⚙", "Ajustes"]];
 let navBtns = {}, lblRacha, lblDias, entFecha, lblPomo, bPomo, lblSync;
 
 function construir() {
@@ -230,7 +231,7 @@ A.ir = (clave, args = {}) => {
   while (cerrarModalSuperior()) { /* cerrar diálogos abiertos */ }
   vaciar(A.main);
   A.main.scrollTop = 0;
-  const fn = { inicio: vistaInicio, profesor: vistaProfesor, repaso: vistaRepaso, examenes: vistaExamenes, validar: vistaValidar, ajustes: vistaAjustes, leccion: vistaLeccion }[clave];
+  const fn = { inicio: vistaInicio, profesor: vistaProfesor, repaso: vistaRepaso, examenes: vistaExamenes, validar: vistaValidar, ajustes: vistaAjustes, leccion: vistaLeccion, entrena: vistaEntrena }[clave];
   try {
     A.vista = fn(A.main, args) || { nombre: clave };
     A.vista.args = args;

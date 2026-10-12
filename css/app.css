@@ -276,3 +276,41 @@ h3.modulo { margin: 18px 0 6px; font-size: 17px; }
   h1 { font-size: 24px; }
   .btn.grande { width: 100%; }
 }
+
+/* ------------------------------------------------------------------ trucos y entrena */
+.truco { background: var(--violeta_bg); border-left: 4px solid var(--violeta); border-radius: 10px; padding: 8px 12px; margin: 8px 0; font-size: 15px; }
+.nota-area { font: 15px var(--fuente); resize: vertical; min-height: 96px; }
+.ambito { margin: 4px 0 12px; }
+.rejilla-juegos { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.juego { text-align: left; background: var(--panel); color: var(--tinta); border: 1px solid var(--borde); border-radius: 16px; padding: 16px;
+  cursor: pointer; font: inherit; display: flex; flex-direction: column; gap: 6px; transition: transform .1s, border-color .1s; }
+.juego:hover { border-color: var(--acento); transform: translateY(-2px); }
+.juego-ic { font-size: 30px; } .juego-tit { font-weight: 700; font-size: 16.5px; } .juego-desc { color: var(--suave); font-size: 13.5px; line-height: 1.4; }
+.juego-extra { margin-top: auto; font-size: 13px; font-weight: 700; color: var(--acento); }
+.juego-img { height: 96px; display: flex; justify-content: center; } .juego-img svg { height: 96px; width: auto; }
+.cab-juego { margin-bottom: 6px; } .marcador { font-weight: 600; font-size: 14px; color: var(--suave); }
+.reloj-juego { font-size: 20px; color: var(--tinta); font-variant-numeric: tabular-nums; }
+.centro { text-align: center; justify-content: center; }
+.vf-zona { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; }
+.vf-carta { background: var(--panel); border: 2px solid var(--borde); border-radius: 18px; padding: 18px 20px; user-select: none; cursor: grab; }
+.vf-carta.ok { border-color: var(--ok); background: var(--ok_bg); } .vf-carta.mal { border-color: var(--mal); background: var(--mal_bg); }
+.vf-carta.tira-ok { border-color: var(--ok); } .vf-carta.tira-mal { border-color: var(--mal); }
+.vf-opcion { font-size: 20px; font-weight: 700; padding: 14px 16px; margin-top: 10px; border-radius: 12px; background: var(--azul_bg); border: 1px solid var(--azul); }
+.vf-fb { margin-top: 10px; font-size: 15px; }
+.vf-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.vf-botones .btn { min-height: 60px; font-size: 18px; }
+.orden-hechos { margin: 8px 0; padding-left: 26px; } .orden-hechos li { margin: 6px 0; padding: 6px 10px; background: var(--ok_bg); border-radius: 8px; }
+.orden-piezas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.pieza { font: 15px var(--fuente); padding: 10px 14px; border-radius: 10px; border: 1px solid var(--borde); background: var(--panel2); color: var(--tinta); cursor: pointer; min-height: 44px; text-align: left; }
+.pieza:hover { border-color: var(--acento); }
+.temblar { animation: temblar .35s; border-color: var(--mal) !important; }
+@keyframes temblar { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+.chips-trampa { margin-top: 10px; }
+.reves-resp { font-size: 20px; font-weight: 700; padding: 14px 16px; border-radius: 12px; background: var(--ok_bg); border: 1px solid var(--ok); margin: 6px 0 12px; }
+.img-grande { display: flex; justify-content: center; margin: 6px 0 12px; } .img-grande svg { width: min(100%, 360px); height: auto; }
+.img-rejilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.img-opcion { background: var(--panel2); border: 2px solid var(--borde); border-radius: 14px; padding: 6px; cursor: pointer; }
+.img-opcion svg { width: 100%; height: auto; max-height: 190px; display: block; }
+.img-opcion.bien { border-color: var(--ok); background: var(--ok_bg); } .img-opcion.mal { border-color: var(--mal); background: var(--mal_bg); }
+.podcast-pantalla { min-height: 280px; } .pensar { margin-top: 10px; }
+.btn.grande.cuadrado, .vf-botones .btn.grande { width: auto; min-width: 64px; } .btn.grande.cuadrado { font-size: 22px; }

@@ -12,7 +12,29 @@ export function verRecorte(rec, titulo = "Recorte literal del manual") {
     el("div.fila.derecha", boton("Cerrar", cerrar, "secundario"))), { ancho: 760 });
 }
 
-const limpia = (s) => s.replace(/^[A-D]\)\s*/, "");
+export const limpia = (s) => s.replace(/^[A-D]\)\s*/, "");
+
+/** Editor del truco propio (mnemotecnia) de una pregunta. */
+export function editarNota(qid, alGuardar) {
+  const q = A.c.preguntas[qid];
+  const area = el("textarea.entrada.ancho.nota-area", { rows: 4, maxlength: 600, placeholder: "Tu regla, frase o asociación para no fallarla. Ej.: «El cielo coagula: azul celeste = citrato»" });
+  area.value = A.p.nota(qid);
+  modal((cerrar) => el("div.dialogo",
+    el("h3", "✏️ Mi truco para esta pregunta"),
+    el("p.suave.peq", q.enunciado.slice(0, 220)),
+    el("p.peq", "Correcta: ", el("b", limpia(q.opciones["ABCD".indexOf(q.correcta)] || ""))),
+    area,
+    el("p.suave.peq", "Lo que inventas tú se recuerda mejor. Aparecerá cada vez que respondas esta pregunta y en el cuaderno de errores."),
+    el("div.fila.entre",
+      A.p.nota(qid) ? boton("Borrar", () => { A.p.setNota(qid, ""); cerrar(); alGuardar && alGuardar(""); }, "fantasma") : el("span"),
+      el("div.fila", boton("Cancelar", cerrar, "secundario"),
+        boton("Guardar", () => { A.p.setNota(qid, area.value); cerrar(); alGuardar && alGuardar(A.p.nota(qid)); }, "primario")))), { ancho: 620 });
+  setTimeout(() => area.focus(), 50);
+}
+export function cajaNota(qid) {
+  const t = A.p.nota(qid);
+  return t ? el("div.truco", el("b", "✏️ Tu truco: "), t) : null;
+}
 
 const CERTEZAS = [
   ["segura", "✔ Segura", "ok", "Enter"],
@@ -128,9 +150,18 @@ export function bloquePregunta(qid, opts = {}) {
     if (res.alerta_trampa_nueva) avisos.push("⚠ Has caído dos veces en el mismo distractor: queda marcada como ALERTA TRAMPA y la próxima vez cambiaré el orden de las opciones.");
     for (const a of avisos) caja.append(rico(a, "peq aviso-fb"));
     caja.append(rico(q.explicacion_rapida || ""));
+    const zonaNota = el("div");
+    const pintarNota = () => zonaNota.replaceChildren(...[cajaNota(qid)].filter(Boolean));
+    pintarNota();
+    caja.append(zonaNota);
 
     const fila = el("div.fila.envuelve");
+    const bNota = boton(A.p.nota(qid) ? "✏️ Editar mi truco" : "✏️ Mi truco", () => editarNota(qid, () => {
+      pintarNota();
+      bNota.textContent = A.p.nota(qid) ? "✏️ Editar mi truco" : "✏️ Mi truco";
+    }), "fantasma", { title: "Escribe tu propia regla para recordarla" });
     if (q.recorte_teorico) fila.append(boton("📖  Ver recorte del manual", () => verRecorte(q.recorte_teorico), bueno ? "secundario" : "aviso"));
+    fila.append(bNota);
     if (!A.c.porValidar(qid)) {
       const bf = boton("🚩", () => {
         A.c.validaciones.marcar(qid);

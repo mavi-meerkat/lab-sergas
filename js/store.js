@@ -29,6 +29,8 @@ export class Store {
     this.listeners = new Set();
     this.refGeneral = doc(db, "users", uid, "d", "general");
     this.refPreg = doc(db, "users", uid, "d", "preguntas");
+    this.refNotas = doc(db, "users", uid, "d", "notas");   // trucos propios por pregunta
+    this.notas = {};
     this.colResp = collection(db, "users", uid, "resp");
     this.colSims = collection(db, "users", uid, "sims");
     this.sincronizado = false;
@@ -37,7 +39,7 @@ export class Store {
 
   /** Arranca la escucha. Resuelve cuando hay un primer estado (de caché o del servidor). */
   iniciar(migracion) {
-    const listos = { g: false, p: false, r: false, s: false };
+    const listos = { g: false, p: false, r: false, s: false, n: false };
     let resolver;
     const prom = new Promise((r) => (resolver = r));
     const comprobar = () => { if (Object.values(listos).every(Boolean)) resolver(); };
@@ -57,6 +59,10 @@ export class Store {
         this.p = snap.exists() ? snap.data() : {};
         listos.p = true; comprobar(); this._emit("preguntas", snap);
       }, (e) => this._error(e)),
+      onSnapshot(this.refNotas, (snap) => {
+        this.notas = snap.exists() ? snap.data() : {};
+        listos.n = true; comprobar(); this._emit("notas", snap);
+      }, (e) => { listos.n = true; comprobar(); this._error(e); }),
       onSnapshot(this.colResp, (snap) => {
         for (const ch of snap.docChanges()) {
           if (ch.type === "removed") delete this.respDia[ch.doc.id];
@@ -111,6 +117,19 @@ export class Store {
     const s = new Set();
     for (const [qid, e] of Object.entries(this.p)) if (e.estado && e.estado !== "nuevo") s.add(qid);
     return s;
+  }
+
+  // ---------------------------------------------------------------- trucos propios (mnemotecnias)
+  nota(qid) { return this.notas[qid] || ""; }
+  setNota(qid, texto) {
+    texto = (texto || "").trim().slice(0, 600);
+    if (texto) {
+      this.notas[qid] = texto;
+      this._w(setDoc(this.refNotas, { [qid]: texto }, { merge: true }));
+    } else {
+      delete this.notas[qid];
+      this._w(setDoc(this.refNotas, { [qid]: deleteField() }, { merge: true }));
+    }
   }
 
   // ---------------------------------------------------------------- respuestas
@@ -234,7 +253,7 @@ export class Store {
   }
 
   async exportar() {
-    return { g: this.g, p: this.p, resp: this.respDia, sims: this.sims, fecha: ahoraISO() };
+    return { g: this.g, p: this.p, notas: this.notas, resp: this.respDia, sims: this.sims, fecha: ahoraISO() };
   }
 
   async refrescarRespuestas() {
