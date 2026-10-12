@@ -41,7 +41,7 @@ function cortoPeso(id, v) {
 }
 const serieTxt = (id, x) => { const p = cortoPeso(id, x.kg); return p ? `${p}×${x.reps}` : `${x.reps} reps`; };
 const ETQ_PESO = { mancuerna: "kg", discos: "+ kg discos", placas: "placa" };
-const VERSION_APP = "7 · 12 oct";
+const VERSION_APP = "8 · 12 oct";
 const SERIE_SEG = 40; // tiempo estimado de trabajo por serie
 // Alternos (1 rep = los dos brazos) y unilaterales (todas las reps con una pierna y luego la otra) duran el doble.
 const segSerie = (e) => SERIE_SEG * (e && EJ[e.id]?.doble ? 2 : 1);
@@ -103,10 +103,11 @@ function render() {
   else if (r === "plan") html = vPlan(+(a || db.infoSemana().semana));
   else if (r === "ej" && a) html = vEjercicio(a, +(b || 0));
   else if (r === "progreso") html = vProgreso();
+  else if (r === "ciclo" && a) html = vCiclo(a);
   else if (r === "ajustes") html = vAjustes();
   else html = vHoy();
-  const tabs = r === "entreno" ? "" : barra(r === "ej" ? "plan" : r);
-  $app.innerHTML = `<main class="vista ${r}">${html}</main>${tabs}`;
+  const tabs = r === "entreno" ? "" : barra(r === "ej" ? "plan" : r === "ciclo" ? "progreso" : r);
+  $app.innerHTML = `<main class="vista ${r === "ciclo" ? "rciclo" : r}">${html}</main>${tabs}`;
   window.scrollTo(0, 0);
   montar(r, a, b);
 }
@@ -261,9 +262,74 @@ function vProgreso() {
     return `<li><a href="#/entreno/${s.fecha}" class="sesrow"><i style="background:${fase(s.semana).color}"></i><div><b>${esc(p.titulo)}</b><span>${NOMBRE_DIA[db.diaISO(db.parse(s.fecha))]} ${db.fechaCorta(s.fecha)} · Semana ${s.semana} · ${dur}</span></div>${dif ? `<span class="dif ${dif}">${DIF[dif]}</span>` : ""}</a></li>`;
   }).join("");
   ponFase(db.infoSemana().semana);
+  const cs = ciclos().reverse().map((c) => `<li><a href="#/ciclo/${c.regla}" class="sesrow"><i style="background:${FASES[0].color}"></i><div><b>Ciclo del ${db.fechaCorta(c.regla)}</b><span>${c.siguiente ? "hasta el " + db.fechaCorta(db.sumaDias(c.siguiente, -1)) : "en curso"}</span></div><span class="flecha">›</span></a></li>`).join("");
+  const todas = Object.values(db.st().sesiones).filter((s) => estadoSesion(s) === "hecho");
   return `<header class="cab"><div><div class="fecha">Tu evolución</div><h1>Progreso</h1></div></header>
+    <section class="card"><h3>Dificultad por fase</h3>${barrasDif(cuentaDif(todas))}<p class="nota">Todas tus valoraciones (cada ejercicio y cada cardio) agrupadas por semana del ciclo.</p></section>
+    ${cs ? `<section class="card"><h3>Resúmenes de ciclo</h3><ul class="lista">${cs}</ul></section>` : ""}
     <section class="card"><h3>Ejercicios</h3><ul class="lista">${lista}</ul></section>
     ${hist ? `<section class="card"><h3>Entrenos realizados</h3><ul class="lista">${hist}</ul></section>` : ""}`;
+}
+
+// ---------- RESUMEN DE CICLO Y DIFICULTAD POR FASE ----------
+const PESO_DIF = { facil: 1, normal: 2, dificil: 3 };
+function difsDe(s) {
+  const out = Object.values(s.ej || {}).map((r) => r.dif).filter(Boolean);
+  if (s.cardio?.dif) out.push(s.cardio.dif);
+  return out;
+}
+function cuentaDif(sesiones) {
+  const c = {}; for (const n of [1, 2, 3, 4]) c[n] = { facil: 0, normal: 0, dificil: 0 };
+  for (const s of sesiones) for (const d of difsDe(s)) c[s.semana][d]++;
+  return c;
+}
+function barrasDif(c) {
+  return `<div class="difbar">${FASES.map((F) => {
+    const x = c[F.n], tot = x.facil + x.normal + x.dificil;
+    const media = tot ? (x.facil + 2 * x.normal + 3 * x.dificil) / tot : 0;
+    return `<div class="dbrow"><span class="dbn"><i style="background:${F.color}"></i>S${F.n} <small>${F.nombre.replace("Fase ", "")}</small></span>
+      <div class="dbb">${tot ? ["facil", "normal", "dificil"].map((k) => x[k] ? `<u class="${k}" style="flex:${x[k]}">${x[k]}</u>` : "").join("") : `<em>sin datos</em>`}</div>
+      <span class="dbm">${tot ? (media < 1.6 ? "Fácil" : media < 2.4 ? "Normal" : "Difícil") : ""}</span></div>`;
+  }).join("")}<div class="dbley"><span><u class="facil"></u>Fácil</span><span><u class="normal"></u>Normal</span><span><u class="dificil"></u>Difícil</span></div></div>`;
+}
+// Ciclos: de una regla a la siguiente (por semanas de lunes a domingo)
+function ciclos() {
+  const R = [...db.st().reglas].sort();
+  return R.map((r, i) => ({ ini: db.lunesDe(r), fin: R[i + 1] ? db.lunesDe(R[i + 1]) : null, regla: r, siguiente: R[i + 1] || null }));
+}
+function vCiclo(regla) {
+  const c = ciclos().find((x) => x.regla === regla);
+  if (!c) return `<a class="volver" href="#/progreso">‹ Progreso</a><section class="card"><p>No encuentro ese ciclo.</p></section>`;
+  const finTxt = c.fin || db.sumaDias(db.lunesDe(db.hoy()), 7);
+  const todas = Object.values(db.st().sesiones);
+  const ses = todas.filter((s) => s.fecha >= c.ini && s.fecha < finTxt && estadoSesion(s) === "hecho");
+  const semanas = Math.max(1, Math.round((db.parse(finTxt) - db.parse(c.ini)) / (7 * 86400000)));
+  const previstos = semanas * 5;
+  const cd = cuentaDif(ses);
+  // Récords: mejor peso del ciclo frente al mejor peso anterior al ciclo
+  const recs = [];
+  const ids = [...new Set(ses.flatMap((s) => Object.values(s.ej || {}).map((r) => r.id)))];
+  for (const id of ids) {
+    if (tipoPeso(id) === "corporal") continue;
+    const h = db.historial(id);
+    const dentro = h.filter((r) => r.fecha >= c.ini && r.fecha < finTxt), antes = h.filter((r) => r.fecha < c.ini);
+    const mD = Math.max(0, ...dentro.map((r) => db.maxKg(r.series))), mA = Math.max(0, ...antes.map((r) => db.maxKg(r.series)));
+    if (antes.length && mD > mA) recs.push(`<li><b>${esc(EJ[id].nombre)}</b><span>${txtPeso(id, mA)} → <strong>${txtPeso(id, mD)}</strong></span></li>`);
+  }
+  // Fase que mejor y peor se te dio (media de dificultad)
+  const medias = FASES.map((F) => { const x = cd[F.n], t = x.facil + x.normal + x.dificil; return { F, t, m: t ? (x.facil + 2 * x.normal + 3 * x.dificil) / t : null }; }).filter((x) => x.t);
+  const mejor = medias.length > 1 ? medias.reduce((a, b) => (b.m < a.m ? b : a)) : null;
+  const peor = medias.length > 1 ? medias.reduce((a, b) => (b.m > a.m ? b : a)) : null;
+  const porSemana = [1, 2, 3, 4].map((n) => ses.filter((s) => s.semana === n).length);
+  ponFase(1);
+  return `<a class="volver" href="#/progreso">‹ Progreso</a>
+    <header class="cab"><div><div class="fecha">Ciclo del ${db.fechaCorta(c.regla)}${c.siguiente ? " al " + db.fechaCorta(db.sumaDias(c.siguiente, -1)) : " · en curso"}</div><h1>Resumen del ciclo</h1></div></header>
+    <section class="card"><div class="reparto"><div><b>${ses.length}/${previstos}</b><span>entrenos</span></div><div><b>${recs.length}</b><span>récords</span></div><div><b>${semanas}</b><span>semanas</span></div></div>
+      <div class="semrow">${FASES.map((F, i) => `<div style="--c:${F.color}"><b>${porSemana[i]}</b><span>S${F.n}</span></div>`).join("")}</div></section>
+    ${mejor && mejor.F !== peor.F ? `<section class="card"><h3>Cómo te fue</h3><p>🌟 Mejor fase: <b style="color:${mejor.F.color}">${mejor.F.nombre}</b><br>🌧 Más dura: <b style="color:${peor.F.color}">${peor.F.nombre}</b></p></section>` : ""}
+    <section class="card"><h3>Dificultad por fase</h3>${barrasDif(cd)}</section>
+    <section class="card"><h3>Récords del ciclo</h3>${recs.length ? `<ul class="lista compacta">${recs.join("")}</ul>` : `<p class="suave">Este ciclo no has superado pesos anteriores${ids.length ? "" : " (todavía no hay datos)"}.</p>`}</section>
+    <a class="btn" href="#/hoy">Volver a Hoy</a>`;
 }
 
 // ---------- AJUSTES ----------
@@ -360,7 +426,7 @@ function vFuerza(s, p) {
   }).join("");
   const filas = r.series.map((x, k) => `<div class="serie ${x.hecho ? "hecha" : ""}" data-k="${k}">
       <span class="sn">${k + 1}</span>
-      ${tp === "corporal" ? `<div class="step corp">Peso corporal</div>` : `<div class="step"><button data-act="kg" data-k="${k}" data-d="-1">−</button><input inputmode="decimal" data-campo="kg" data-k="${k}" value="${fmtKg(+x.kg || 0)}"><button data-act="kg" data-k="${k}" data-d="1">+</button><small>${ETQ_PESO[tp]}</small></div>`}
+      ${tp === "corporal" ? `<div class="step corp">Peso corporal</div>` : `<div class="step"><button data-act="kg" data-k="${k}" data-d="-1">−</button><input readonly data-act="pesoSel" data-campo="kg" data-k="${k}" value="${fmtKg(+x.kg || 0)}"><button data-act="kg" data-k="${k}" data-d="1">+</button><small>${ETQ_PESO[tp]}</small></div>`}
       <div class="step"><button data-act="reps" data-k="${k}" data-d="-1">−</button><input inputmode="numeric" data-campo="reps" data-k="${k}" value="${x.reps}"><button data-act="reps" data-k="${k}" data-d="1">+</button><small>reps</small></div>
       <button class="check" data-act="serie" data-k="${k}" aria-label="Serie hecha">✓</button></div>`).join("");
   const todas = r.series.every((x) => x.hecho);
@@ -385,7 +451,28 @@ function vFuerza(s, p) {
       ${ultimo ? `<button class="btn" data-act="terminar">Terminar entreno</button>` : `<button class="btn" data-act="irEj" data-i="${i + 1}">Siguiente ›</button>`}
     </footer>
     ${s.fin ? resumenFuerza(s, p) : ""}
-    <div id="descanso" class="descanso" hidden></div>`;
+    <div id="descanso" class="descanso" hidden></div>
+    <div id="hoja" class="hoja" hidden></div>`;
+}
+// Valores posibles de peso para el selector rápido
+function valoresPeso(id, actual) {
+  const t = tipoPeso(id);
+  let v;
+  if (t === "mancuerna") v = MANC.slice(0, 14);
+  else if (t === "discos") { const st = EJ[id]?.paso || 2.5, max = st >= 20 ? 300 : st >= 5 ? 120 : 60; v = []; for (let x = 0; x <= max + 1e-9; x += st) v.push(Math.round(x * 10) / 10); }
+  else v = Array.from({ length: 21 }, (_, i) => i);
+  if (actual && !v.some((x) => Math.abs(x - actual) < 1e-9)) v = [...v, actual].sort((a, b) => a - b);
+  return v;
+}
+function abrirHoja(id, k, actual) {
+  const h = document.getElementById("hoja"); if (!h) return;
+  const t = tipoPeso(id);
+  const tit = t === "placas" ? "Elige la placa" : t === "discos" ? "Kg de discos que añades" : "Elige el peso de la mancuerna";
+  h.innerHTML = `<div class="hcont"><div class="hcab"><b>${tit}</b><small>Serie ${k + 1}</small><button class="mini" data-act="hojaCerrar">Cerrar</button></div>
+    <div class="hgrid">${valoresPeso(id, actual).map((v) => `<button class="hv ${Math.abs(v - actual) < 1e-9 ? "on" : ""}" data-act="pesoSet" data-k="${k}" data-v="${v}">${t === "discos" && !v ? "Solo máq." : t === "placas" && !v ? "Sin placa" : fmtKg(v)}</button>`).join("")}</div>
+    <div class="hotro"><input id="pesoOtro" inputmode="decimal" placeholder="Otro valor"><button class="mini prim" data-act="pesoOtro" data-k="${k}">Usar</button></div></div>`;
+  h.hidden = false;
+  h.querySelector(".hv.on")?.scrollIntoView({ block: "center" });
 }
 function estimarRestante(s, p) {
   let t = 0;
@@ -521,6 +608,7 @@ function empezarDescanso(s, seg, tipo) { const fin = Date.now() + seg * 1000; s.
 
 // Delegación de eventos
 $app.addEventListener("click", async (ev) => {
+  if (ev.target.id === "hoja") { ev.target.hidden = true; return; }
   const el = ev.target.closest("[data-act]");
   if (!el) return;
   const act = el.dataset.act;
@@ -533,7 +621,9 @@ $app.addEventListener("click", async (ev) => {
   switch (act) {
     case "regla": {
       if (!confirm("¿Registrar hoy como primer día de la regla? Esta semana pasará a ser la Semana 1.")) return;
-      db.registrarRegla(); toast("Regla registrada · Semana 1"); render(); return;
+      const previa = [...db.st().reglas].sort().filter((x) => x < db.hoy()).pop();
+      db.registrarRegla(); toast("Regla registrada · Semana 1");
+      if (previa) ir(`#/ciclo/${previa}`); else render(); return;
     }
     case "addRegla": { const v = document.getElementById("fRegla").value; if (v) { db.registrarRegla(v); toast("Regla añadida"); render(); } return; }
     case "borraRegla": if (confirm("¿Borrar esta fecha?")) { db.borrarRegla(el.dataset.f); render(); } return;
@@ -593,6 +683,17 @@ $app.addEventListener("click", async (ev) => {
       document.querySelector(".resumen")?.scrollIntoView({ behavior: "smooth" }); return;
     }
     case "dMas": if (s.descanso) { s.descanso.fin += +el.dataset.d * 1000; s.descanso.total = Math.max(1, s.descanso.total + +el.dataset.d); db.guardar(); } return;
+    case "pesoSel": { const k = +el.dataset.k; abrirHoja(r.id, k, +r.series[k].kg || 0); return; }
+    case "hojaCerrar": document.getElementById("hoja").hidden = true; return;
+    case "pesoSet": case "pesoOtro": {
+      const k = +el.dataset.k;
+      const v = act === "pesoSet" ? +el.dataset.v : num(document.getElementById("pesoOtro").value);
+      if (act === "pesoOtro" && !(v >= 0)) return;
+      r.series[k].kg = v;
+      for (let j = k + 1; j < r.series.length; j++) if (!r.series[j].hecho) r.series[j].kg = v;
+      document.getElementById("hoja").hidden = true;
+      db.guardar(); refrescaSeries(r); tickDescanso(s, p); return;
+    }
     case "dSalta": s.descanso = null; db.guardar(); tickDescanso(s, p); return;
     // cardio
     case "cGo": s.cardio = { inicio: Date.now(), pausado: 0, pausa: null, salto: 0 }; ultimoBloque = -1; db.guardar(); mantenerPantalla(true); render(); return;
