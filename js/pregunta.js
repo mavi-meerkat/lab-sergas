@@ -1,6 +1,7 @@
 // Bloque de pregunta tipo test con corrección inmediata + visor del recorte del libro.
 import { A } from "./ctx.js";
 import { el, boton, chip, rico, tarjeta, modal } from "./ui.js";
+import { tipoFallo } from "./cifras.js";
 
 export function verRecorte(rec, titulo = "Recorte literal del manual") {
   modal((cerrar) => el("div.dialogo",
@@ -147,6 +148,10 @@ export function bloquePregunta(qid, opts = {}) {
     else if (res.correcta && res.confirmar > 0) avisos.push(`Bien corregida. Falta **${res.confirmar}** confirmación más para darla por superada.`);
     else if (res.correcta && res.lento) avisos.push(`Has tardado ${seg(ms)} s: aún no sale sola, así que no se permite «Fácil». En el examen tienes ~80 s por pregunta, pero las que dominas deben salir en segundos.`);
     else if (res.dominada) avisos.push("Tres veces seguidas segura y rápida: ya es un reflejo.");
+    const tf = !res.correcta && letra ? tipoFallo(q, letra) : null;
+    if (tf && tf.tipo === "inversion") avisos.push(`🔢 **Dígitos invertidos:** marcaste **${tf.tu}** y era **${tf.ok}**. La cifra la sabías; el fallo fue al leerla. Antes de marcar, lee la cifra dígito a dígito.`);
+    else if (tf && tf.tipo === "cifra") avisos.push(`🔢 **Fallo de cifra:** la opción dice lo mismo y solo cambia el número. Marcaste **${tf.tu}**; era **${tf.ok}**.`);
+    else if (tf && tf.tipo === "concepto") avisos.push("📘 **Fallo de concepto:** no es un número; repasa la idea en la explicación.");
     if (res.alerta_trampa_nueva) avisos.push("⚠ Has caído dos veces en el mismo distractor: queda marcada como ALERTA TRAMPA y la próxima vez cambiaré el orden de las opciones.");
     for (const a of avisos) caja.append(rico(a, "peq aviso-fb"));
     caja.append(rico(q.explicacion_rapida || ""));

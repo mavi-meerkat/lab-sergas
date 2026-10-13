@@ -1,6 +1,7 @@
 // Simulacros de examen — formato oficial SERGAS. Port de simulacro.py.
 import { norm, rngSemilla, ahoraISO } from "./util.js";
 import { necesitaValidar } from "./content.js";
+import { tipoFallo } from "./cifras.js";
 
 export const PUNTOS_ACIERTO = 0.5;
 export const PUNTOS_FALLO = -0.125;
@@ -276,11 +277,15 @@ export class Simulacros {
       causas.push(["Elegiste «todas / ninguna»",
         "Marcaste una opción global, pero al menos una de las otras es falsa (o cierta). Para elegir «todas» tienes que estar seguro de CADA una."]);
     }
-    const nums = (s) => (s || "").match(/\d+(?:[.,]\d+)?/g) || [];
-    if (elegida && nums(txtOk).length && nums(txtTu).length && nums(txtOk).join("|") !== nums(txtTu).join("|")) {
-      causas.push(["Confusión de cifras",
-        `La correcta es «${txtOk}» y marcaste «${txtTu}». Son valores parecidos: este tipo de pregunta mide si te sabes ` +
-        "el número exacto. Apúntalo en tu lista de cifras clave."]);
+    const tf = tipoFallo(q, elegida);
+    if (tf && tf.tipo === "inversion") {
+      causas.push(["Dígitos invertidos",
+        `Marcaste «${txtTu}» y la correcta es «${txtOk}»: ${tf.tu} en vez de ${tf.ok}, los mismos dígitos en otro orden. ` +
+        "La cifra la sabías; el fallo fue al leerla. Antes de marcar una opción con números, léela dígito a dígito."]);
+    } else if (tf && tf.tipo === "cifra") {
+      causas.push(["Fallo de cifra",
+        `Las opciones dicen lo mismo y solo cambia el número: marcaste ${tf.tu} y era ${tf.ok}. ` +
+        "El concepto lo tienes; lo que falta es fijar el valor exacto."]);
     }
     const e = this.p.estado(qid);
     if (elegida && e.ultimo_distractor === elegida && e.repeticion_distractor >= 2) {

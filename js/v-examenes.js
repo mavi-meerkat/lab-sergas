@@ -1,5 +1,6 @@
 // Simulacros: menú, examen con hoja de respuestas y cronómetro, corrección y «Entender el error».
 import { A, TIPOS_TARJETA } from "./ctx.js";
+import { tipoFallo } from "./cifras.js";
 import { el, boton, chip, tarjeta, rico, barra, segmentado, confirmar, aviso, modal } from "./ui.js";
 import { verRecorte } from "./pregunta.js";
 import { num } from "./util.js";
@@ -303,6 +304,11 @@ export function vistaExamenes(main, { sid = null, modo = null } = {}) {
           ? "Con tus dudas aciertas más del 20 %: en el examen te compensa contestarlas."
           : "Con tus dudas aciertas menos del 20 %: en el examen, déjalas en blanco."));
       }
+    }
+    {
+      const tf = { concepto: 0, cifra: 0, inversion: 0 };
+      for (const d of r.detalle) if (d.cuenta && d.res === "fallo") { const t = tipoFallo(A.c.preguntas[d.q], d.elegida); if (t) tf[t.tipo]++; }
+      if (tf.cifra || tf.inversion) der.append(el("p.peq", `🔢 Fallos: ${tf.concepto} de concepto · ${tf.cifra} de cifra · ${tf.inversion} por dígitos invertidos`));
     }
     if (r.fallos) der.append(el("p.suave.peq", `Si esas ${r.fallos} preguntas falladas las hubieras dejado en blanco, tendrías ${num(r.neta + r.puntos_perdidos_fallos, 2)} puntos.`));
     main.append(tarjeta("fila-opcion bg-" + col + "_bg",

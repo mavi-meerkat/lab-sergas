@@ -1,6 +1,7 @@
 // Motor de estudio activo: repetición espaciada SM-2 modificada, debilidades, trampas y plan diario.
 // Port fiel de engine.py de la app de escritorio.
 import { hoy, sumarDias, diasEntre, ahoraISO, round, azar } from "./util.js";
+import { tipoFallo } from "./cifras.js";
 
 export const UMBRAL_DEBILIDAD = 0.65;
 export const MIN_RESPUESTAS_DEBILIDAD = 5;
@@ -353,6 +354,16 @@ export class Motor {
         ? `Incluso «al azar» aciertas el ${f(cal.azar.pct)}: tu intuición descarta bien; si eliminas al menos una opción, arriesga.`
         : `Al azar aciertas el ${f(cal.azar.pct)}: sin descartar nada, deja la pregunta en blanco.`);
     return out;
+  }
+  /** Reparto de los fallos (últimos `ultimas`): concepto, cifra y dígitos invertidos. */
+  tiposDeFallo(ultimas = 400, filtro = null) {
+    const r = { concepto: 0, cifra: 0, inversion: 0 };
+    const resp = this.p.respuestas().filter((x) => !x.c && x.e && (!filtro || filtro(x))).slice(-ultimas);
+    for (const x of resp) {
+      const t = tipoFallo(this.c.preguntas[x.q], x.e);
+      if (t) r[t.tipo] += 1;
+    }
+    return r;
   }
   erroresSeguros() {
     return Object.entries(this.p.p).filter(([q, e]) => this.c.preguntas[q] && (e.confirmar || 0) > 0).map(([q]) => q);

@@ -42,6 +42,8 @@ export function vistaRepaso(main, { modo = null, unidad = null, ids = null } = {
       : "Aparecerán aquí las preguntas que aciertes dudando, por suerte o despacio.",
       "Entrenar", () => empezar("reflejos"), "aviso", nRef > 0);
     main.append(panelSeguridad());
+    const pf = panelFallos();
+    if (pf) main.append(pf);
     if (bloqueo && m.paseDisponible()) {
       main.append(el("div.fila.envuelve", el("span.suave.peq", "¿Hoy no puedes cumplir? Tienes 1 pase de emergencia al día."),
         boton("Usar pase de emergencia", async () => {
@@ -123,6 +125,20 @@ export function vistaRepaso(main, { modo = null, unidad = null, ids = null } = {
     caja.append(el("p.peq", `🏅 ${rs.dominadas} dominadas sin dudas · 🤔 ${rs.inseguras} inseguras · 🎯 ${rs.errores} errores seguros por corregir` +
       (cal.t_mediano ? ` · tiempo típico de respuesta segura: ${Math.round(cal.t_mediano / 1000)} s` : "")));
     for (const c of m.consejoExamen(cal)) caja.append(el("p.peq.c-acento", "💡 " + c));
+    return caja;
+  }
+  function panelFallos() {
+    const t = m.tiposDeFallo();
+    const tot = t.concepto + t.cifra + t.inversion;
+    if (tot < 5) return null;
+    const pc = (x) => Math.round((x / tot) * 100) + " %";
+    const nf = (x) => (x === 1 ? "1 fallo" : `${x} fallos`);
+    const caja = tarjeta("", el("h3", "🔢 Tipos de fallo"),
+      el("div.calib",
+        el("div", el("div.suave.peq", "De concepto"), el("div.big", pc(t.concepto)), el("div.suave.peq", nf(t.concepto))),
+        el("div", el("div.suave.peq", "De cifra"), el("div.big.c-aviso", pc(t.cifra)), el("div.suave.peq", nf(t.cifra))),
+        el("div", el("div.suave.peq", "Dígitos invertidos"), el("div.big.c-trampa", pc(t.inversion)), el("div.suave.peq", nf(t.inversion)))),
+      el("p.suave.peq", "Últimos 400 fallos. «De cifra»: la opción decía lo mismo y solo cambiaba el número. «Dígitos invertidos»: los mismos dígitos en otro orden (45 por 54), la cifra la sabías."));
     return caja;
   }
   function fin() {
