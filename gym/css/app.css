@@ -8,7 +8,7 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#141218; --card:#1F1C25; --txt:#F2EFF6; --txt2:#A6A1B2; --line:#2F2B36; --soft:#29252F;
   --facil:#4CC199; --normal:#E2B04A; --dificil:#F06A5B; color-scheme:dark;}}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 html,body{margin:0;background:var(--bg);color:var(--txt)}
 body{font-family:ui-rounded,-apple-system,"SF Pro Rounded",system-ui,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.4;-webkit-text-size-adjust:100%;overscroll-behavior-y:none}
 button,input,select{font:inherit;color:inherit}
@@ -228,3 +228,7 @@ u.facil{background:var(--facil)}u.normal{background:var(--normal)}u.dificil{back
 .semrow{display:flex;gap:6px;margin-top:10px}.semrow div{flex:1;text-align:center;border-radius:12px;padding:8px 0;background:color-mix(in srgb,var(--c) 16%,var(--soft))}
 .semrow b{display:block;font-size:18px;color:var(--c)}.semrow span{font-size:12px;color:var(--txt2)}
 .flecha{color:var(--txt2);font-size:22px}
+
+/* Evita el zoom por doble toque y el zoom automático de iOS al escribir (texto >= 16px) */
+input,select,textarea{font-size:16px}
+button,input,.step,.serie{touch-action:manipulation}
