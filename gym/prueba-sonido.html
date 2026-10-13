@@ -27,33 +27,31 @@ button.sec{background:var(--soft);color:var(--txt)}
 .linea i.suave{background:color-mix(in srgb,var(--acc) 35%,var(--soft));color:var(--txt)}
 .linea i.fuerte{background:var(--acc);color:#fff;font-weight:800;width:64px}
 .nota{font-size:13px;color:var(--txt2)}
-body.flash{animation:fl .8s ease-out}@keyframes fl{0%,30%{background:var(--acc)}}
+body.flash::after{content:"";position:fixed;inset:0;background:#fff;z-index:60;pointer-events:none;animation:flash 1s ease-out forwards}
+@keyframes flash{0%,40%{opacity:.92}100%{opacity:0}}
 </style>
 </head>
 <body>
 <main>
   <h1>Prueba del aviso de descanso</h1>
-  <p>Sube el volumen del iPhone y pulsa una de las dos opciones. La cuenta atrás empieza en 8 s para que llegues enseguida a los últimos 5.</p>
+  <p>Sube el volumen del iPhone y pulsa Probar. La cuenta atrás empieza en 8 s para que llegues enseguida a los últimos 5.</p>
 
   <div class="card">
     <div class="anillo" id="an"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="fondo"/><circle cx="60" cy="60" r="52" class="prog" id="prog"/></svg><b id="cuenta">0:08</b></div>
   </div>
 
   <div class="card">
-    <h2>Opción A · 4 pitidos suaves + 1 fuerte</h2>
-    <p>Un pitido corto y suave en cada uno de los segundos 4, 3, 2 y 1, y al llegar a 0 uno largo y fuerte.</p>
+    <h2>Opción A · 4 pitidos suaves + 1 final</h2>
+    <p>Un pitido corto y suave en los segundos 4, 3, 2 y 1. Al llegar a 0, un pitido final más corto y menos intenso que antes, y toda la pantalla se ilumina.</p>
     <div class="linea"><i>5</i><i class="suave">4</i><i class="suave">3</i><i class="suave">2</i><i class="suave">1</i><i class="fuerte">0 ¡YA!</i></div>
-    <button data-op="A">▶︎ Probar opción A</button>
+    <button data-op="A" data-n="medio">▶︎ Probar</button>
   </div>
-
   <div class="card">
-    <h2>Opción B · tono suave continuo 4 s + 1 fuerte</h2>
-    <p>Un tono suave seguido durante los últimos 4 segundos y, al llegar a 0, el pitido largo y fuerte.</p>
-    <div class="linea"><i>5</i><i class="suave" style="width:188px">tono suave continuo</i><i class="fuerte">0 ¡YA!</i></div>
-    <button data-op="B">▶︎ Probar opción B</button>
+    <h2>¿Pitido final más suave o más fuerte?</h2>
+    <p>Por si quieres comparar la intensidad del pitido final:</p>
+    <div class="fila"><button class="sec" data-op="A" data-n="suave">Más suave</button><button class="sec" data-op="A" data-n="medio">Normal</button><button class="sec" data-op="A" data-n="fuerte">Más fuerte</button></div>
   </div>
-
-  <div class="card"><div class="fila"><button class="sec" id="fuerte">Solo el pitido fuerte</button><button class="sec" id="parar">Parar</button></div>
+  <div class="card"><div class="fila"><button class="sec" id="fuerte">Solo el pitido final</button><button class="sec" id="parar">Parar</button></div>
     <p class="nota" style="margin-top:12px">Si el iPhone está en modo silencio puede que no suene. Con música en los auriculares, la música baja un momento mientras suenan los pitidos.</p></div>
 </main>
 <script>
@@ -71,16 +69,18 @@ function suave(t, dur = 0.16) {
   g.gain.setValueAtTime(0.35, t + dur - 0.04); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + dur + 0.02); nodos.push(o);
 }
-// Pitido fuerte: dos tonos agudos superpuestos (se oye mejor con ruido), a máximo volumen, ~1,2 s
+// Pitido final: corto (0,45 s) y de intensidad moderada
+const NIVEL = { suave: 0.4, medio: 0.6, fuerte: 0.85 };
+let nivel = "medio";
 function fuerte(t) {
-  const g = ctx.createGain(), comp = ctx.createDynamicsCompressor();
-  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(1, t + 0.02);
-  g.gain.setValueAtTime(1, t + 1.0); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.25);
-  for (const [f, tipo] of [[1760, "square"], [2637, "triangle"]]) {
-    const o = ctx.createOscillator(); o.type = tipo; o.frequency.value = f;
-    o.connect(g); o.start(t); o.stop(t + 1.3); nodos.push(o);
+  const g = ctx.createGain(), v = NIVEL[nivel];
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.015);
+  g.gain.setValueAtTime(v, t + 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+  for (const [f, tipo, m] of [[1568, "triangle", 1], [3136, "sine", 0.25]]) {
+    const o = ctx.createOscillator(), gg = ctx.createGain(); o.type = tipo; o.frequency.value = f; gg.gain.value = m;
+    o.connect(gg).connect(g); o.start(t); o.stop(t + 0.5); nodos.push(o);
   }
-  g.connect(comp).connect(ctx.destination);
+  g.connect(ctx.destination);
 }
 function continuo(t, dur) {
   const o = ctx.createOscillator(), g = ctx.createGain();
@@ -89,6 +89,8 @@ function continuo(t, dur) {
   g.gain.setValueAtTime(0.22, t + dur - 0.1); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + dur + 0.05); nodos.push(o);
 }
+// Igual que en la app: toda la pantalla se ilumina en blanco y se desvanece
+function destello() { document.body.classList.remove("flash"); void document.body.offsetWidth; document.body.classList.add("flash"); }
 function parar() {
   timers.forEach(clearTimeout); timers = []; cancelAnimationFrame(raf);
   nodos.forEach((o) => { try { o.stop(); } catch {} }); nodos = [];
@@ -106,12 +108,12 @@ function empezar(op) {
   if (op === "A") for (const s of [4, 3, 2, 1]) suave(t0 + (total - s));
   else continuo(t0 + total - 4, 4);
   fuerte(t0 + total);
-  timers.push(setTimeout(() => { document.body.classList.remove("flash"); void document.body.offsetWidth; document.body.classList.add("flash"); }, total * 1000));
+  timers.push(setTimeout(destello, total * 1000));
   const loop = () => { const r = total - (performance.now() - ini) / 1000; pinta(r, total); if (r > 0) raf = requestAnimationFrame(loop); };
   loop();
 }
-document.querySelectorAll("[data-op]").forEach((b) => b.addEventListener("click", () => empezar(b.dataset.op)));
-document.getElementById("fuerte").addEventListener("click", () => { parar(); audio(); fuerte(ctx.currentTime + 0.05); });
+document.querySelectorAll("[data-op]").forEach((b) => b.addEventListener("click", () => { nivel = b.dataset.n || "medio"; empezar(b.dataset.op); }));
+document.getElementById("fuerte").addEventListener("click", () => { parar(); audio(); fuerte(ctx.currentTime + 0.05); destello(); });
 document.getElementById("parar").addEventListener("click", parar);
 pinta(8, 8);
 </script>
