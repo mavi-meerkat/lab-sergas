@@ -41,15 +41,10 @@ body.flash::after{content:"";position:fixed;inset:0;background:#fff;z-index:60;p
   </div>
 
   <div class="card">
-    <h2>Opción A · 4 pitidos suaves + 1 final</h2>
-    <p>Un pitido corto y suave en los segundos 4, 3, 2 y 1. Al llegar a 0, un pitido final más corto y menos intenso que antes, y toda la pantalla se ilumina.</p>
+    <h2>4 pitidos suaves + 1 final igual pero más largo</h2>
+    <p>Un pitido corto y suave en los segundos 4, 3, 2 y 1. Al llegar a 0, el mismo pitido suave pero medio segundo más largo, y toda la pantalla se ilumina.</p>
     <div class="linea"><i>5</i><i class="suave">4</i><i class="suave">3</i><i class="suave">2</i><i class="suave">1</i><i class="fuerte">0 ¡YA!</i></div>
     <button data-op="A" data-n="medio">▶︎ Probar</button>
-  </div>
-  <div class="card">
-    <h2>¿Pitido final más suave o más fuerte?</h2>
-    <p>Por si quieres comparar la intensidad del pitido final:</p>
-    <div class="fila"><button class="sec" data-op="A" data-n="suave">Más suave</button><button class="sec" data-op="A" data-n="medio">Normal</button><button class="sec" data-op="A" data-n="fuerte">Más fuerte</button></div>
   </div>
   <div class="card"><div class="fila"><button class="sec" id="fuerte">Solo el pitido final</button><button class="sec" id="parar">Parar</button></div>
     <p class="nota" style="margin-top:12px">Si el iPhone está en modo silencio puede que no suene. Con música en los auriculares, la música baja un momento mientras suenan los pitidos.</p></div>
@@ -69,19 +64,9 @@ function suave(t, dur = 0.16) {
   g.gain.setValueAtTime(0.35, t + dur - 0.04); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + dur + 0.02); nodos.push(o);
 }
-// Pitido final: corto (0,45 s) y de intensidad moderada
-const NIVEL = { suave: 0.4, medio: 0.6, fuerte: 0.85 };
+// Pitido final: el mismo pitido suave de los segundos, medio segundo más largo (0,16 s + 0,5 s)
 let nivel = "medio";
-function fuerte(t) {
-  const g = ctx.createGain(), v = NIVEL[nivel];
-  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.015);
-  g.gain.setValueAtTime(v, t + 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
-  for (const [f, tipo, m] of [[1568, "triangle", 1], [3136, "sine", 0.25]]) {
-    const o = ctx.createOscillator(), gg = ctx.createGain(); o.type = tipo; o.frequency.value = f; gg.gain.value = m;
-    o.connect(gg).connect(g); o.start(t); o.stop(t + 0.5); nodos.push(o);
-  }
-  g.connect(ctx.destination);
-}
+function fuerte(t) { suave(t, 0.66); }
 function continuo(t, dur) {
   const o = ctx.createOscillator(), g = ctx.createGain();
   o.type = "sine"; o.frequency.value = 1100;
