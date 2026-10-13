@@ -41,7 +41,7 @@ function cortoPeso(id, v) {
 }
 const serieTxt = (id, x) => { const p = cortoPeso(id, x.kg); return p ? `${p}×${x.reps}` : `${x.reps} reps`; };
 const ETQ_PESO = { mancuerna: "kg", discos: "+ kg discos", placas: "placa" };
-const VERSION_APP = "9 · 13 oct";
+const VERSION_APP = "10 · 13 oct";
 const SERIE_SEG = 40; // tiempo estimado de trabajo por serie
 // Alternos (1 rep = los dos brazos) y unilaterales (todas las reps con una pierna y luego la otra) duran el doble.
 const segSerie = (e) => SERIE_SEG * (e && EJ[e.id]?.doble ? 2 : 1);
@@ -73,7 +73,20 @@ function pitido(freq = 880, dur = 0.14, cuando = 0) {
     o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + dur + 0.02);
   } catch {}
 }
-const pitidoFin = () => { pitido(988, 0.18); pitido(988, 0.18, 0.25); pitido(1318, 0.45, 0.5); };
+// Pitido suave (el elegido en la prueba): tono limpio de 1320 Hz, volumen medio.
+function bip(dur = 0.16) {
+  if (!db.st().ajustes.sonido || !ctx) return;
+  try {
+    const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = "sine"; o.frequency.value = 1320;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.015);
+    g.gain.setValueAtTime(0.35, t + dur - 0.04); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + dur + 0.02);
+  } catch {}
+}
+// Cuenta atrás: un bip suave en 4, 3, 2 y 1; al llegar a 0, el mismo bip medio segundo más largo.
+const bipCuenta = () => bip(0.16);
+const pitidoFin = () => bip(0.66);
 
 // ---------- Pantalla encendida ----------
 let lock = null;
@@ -567,8 +580,8 @@ function tickEntreno(fecha) {
   document.querySelectorAll(".cblist li").forEach((li) => { const j = +li.dataset.b; li.className = j < bl.indexOf(b) || c.hecho ? "pasado" : j === bl.indexOf(b) && c.inicio ? "actual" : ""; });
   if (!c.inicio || c.pausa || c.hecho) return;
   const idx = bl.indexOf(b), resto = Math.ceil(b.fin - t);
-  if (sig && resto <= 10 && resto > 3 && aviso10 !== idx) { aviso10 = idx; pitido(784, 0.12); pitido(784, 0.12, 0.18); destello(); }
-  if (resto <= 3 && resto > 0 && ultimoAviso !== idx * 10 + resto) { ultimoAviso = idx * 10 + resto; pitido(660, 0.1); }
+  if (sig && resto <= 10 && resto > 4 && aviso10 !== idx) { aviso10 = idx; pitido(784, 0.12); pitido(784, 0.12, 0.18); destello(); }
+  if (resto <= 4 && resto > 0 && ultimoAviso !== idx * 10 + resto) { ultimoAviso = idx * 10 + resto; bipCuenta(); }
   if (ultimoBloque !== -1 && idx !== ultimoBloque) { pitidoFin(); destello(); }
   ultimoBloque = idx;
   if (t >= total) { c.hecho = true; s.cardio = c; db.guardar(); pitidoFin(); destello(); mantenerPantalla(false); render(); }
@@ -583,7 +596,7 @@ function tickDescanso(s, p) {
   const resta = (d.fin - Date.now()) / 1000;
   if (resta <= 0) { s.descanso = null; db.guardar(); ocultar(); pitidoFin(); destello(); return; }
   const seg = Math.ceil(resta);
-  if (seg <= 3 && ultimoAviso !== seg) { ultimoAviso = seg; pitido(660, 0.1); }
+  if (seg <= 4 && ultimoAviso !== seg) { ultimoAviso = seg; bipCuenta(); }
   // Barra de descanso abajo: no tapa el ejercicio, así puedes ir ajustando el peso de la siguiente serie.
   if (box.hidden || box.dataset.id !== String(d.fin0)) {
     box.dataset.id = d.fin0;
