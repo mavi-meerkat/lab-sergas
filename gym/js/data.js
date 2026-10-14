@@ -99,37 +99,7 @@ export const BLOQUES = {
   },
 };
 
-// Cardio en cinta: bloques con minutos, velocidad (km/h) e inclinación (%).
-const b = (tipo, min, vel, inc) => ({ tipo, min, vel, inc });
-const rep = (n, ...bs) => Array.from({ length: n }, () => bs).flat();
-const CAL = (vel, inc) => b("Calentamiento", 5, vel, inc);
-const ENF = b("Enfriamiento", 5, "4.0", "0");
-
-export const CARDIO = {
-  1: {
-    lema: "Cardio suave y regulador", intro: "Velocidades moderadas, flujo constante sin sobrecargar la zona pélvica.",
-    s1: [CAL("4.5", "0–2"), b("Bloque principal", 20, "5.0", "6–8"), ENF],
-    s2: [CAL("4.5", "0"), b("Bloque principal", 40, "4.8–5.0", "5–6"), ENF],
-    notaS2: "El bloque principal puede ser de 35–40 min.",
-  },
-  2: {
-    lema: "Intervalos de quema y subida", intro: "Subimos un punto la velocidad de crucero y exprimimos las pendientes.",
-    s1: [CAL("4.8", "0–2"), ...rep(4, b("Subida", 3, "5.2–5.5", "10–12"), b("Recupera", 2, "4.8", "4–5")), ENF],
-    s2: [CAL("4.8", "0"), ...rep(5, b("Subida", 5, "5.0–5.2", "10"), b("Recupera", 3, "4.8", "5")), ENF],
-  },
-  3: {
-    lema: "Pico de intensidad y pendiente máxima", intro: "Caminatas de auténtica montaña a velocidad controlada.",
-    s1: [CAL("5.0", "0–2"), ...rep(3, b("Subida larga", 7, "5.2–5.5", "12–14"), b("Recupera", 2, "4.8", "6")), ENF],
-    s2: [CAL("5.0", "0"), ...rep(4, b("Subida", 6, "5.2–5.5", "12"), b("Recupera", 3, "4.8", "5–6")), b("Subida", 4, "5.2–5.5", "12"), ENF],
-  },
-  4: {
-    lema: "Cardio regulador y antihinchazón", intro: "Velocidad contenida para no estresar el sistema nervioso antes de la regla.",
-    s1: [CAL("4.5", "0–2"), b("Bloque principal", 20, "4.8–5.0", "7–9"), ENF],
-    s2: [CAL("4.5", "0"), ...rep(5, b("Subida", 4, "4.8–5.0", "8"), b("Recupera", 4, "4.5", "4")), ENF],
-  },
-};
-
-// Cardio libre (sustituye a los bloques predefinidos por semana)
+// Cardio libre: calentamiento y enfriamiento fijos; en el bloque principal eliges velocidad e inclinación
 export const CARDIO_LIBRE = {
   cal: { min: 2, vel: 4.0, inc: 2 },
   enf: { min: 2, vel: 3.0, inc: 0 },
@@ -142,9 +112,9 @@ export const CARDIO_LIBRE = {
 export const DIAS = {
   1: { tipo: "fuerza", bloque: "A" },
   2: { tipo: "fuerza", bloque: "B" },
-  3: { tipo: "cardio", sesion: "s1", nombre: "Cardio · 30 min" },
+  3: { tipo: "cardio", sesion: "s1", nombre: "Cardio corto · 29 min" },
   4: { tipo: "fuerza", bloque: "C" },
-  5: { tipo: "cardio", sesion: "s2", nombre: "Cardio · 45–50 min" },
+  5: { tipo: "cardio", sesion: "s2", nombre: "Cardio largo · 49 min" },
   6: { tipo: "descanso" },
   7: { tipo: "descanso" },
 };

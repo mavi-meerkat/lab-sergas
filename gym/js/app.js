@@ -1,4 +1,4 @@
-import { FASES, EJ, BLOQUES, CARDIO, CARDIO_LIBRE, DIAS, NOMBRE_DIA, sesionDe } from "./data.js";
+import { FASES, EJ, BLOQUES, CARDIO_LIBRE, DIAS, NOMBRE_DIA, sesionDe } from "./data.js";
 import * as db from "./store.js";
 import { animar, svgEstatico, pararAnimaciones } from "./figuras.js";
 
