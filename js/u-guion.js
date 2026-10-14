@@ -114,9 +114,21 @@ export const GUION = {
   ],
 };
 
-/** Todas las frases fijas (para generar el guion de grabación). */
-export function todasLasFrases() {
+// frases fijas usadas fuera de GUION (también se graban)
+export const FRASES_EXTRA = [
+  ["carmen", "Este expediente sigue abierto. Léelo con calma y dime qué ves."],
+  ["sospechoso_h", "¡Por fin alguien me cree, detective!"], ["sospechoso_m", "¡Por fin alguien me cree, detective!"],
+  ["sospechoso_h", "Vaya… se lo ha creído."], ["sospechoso_m", "Vaya… se lo ha creído."],
+];
+
+/** Todas las frases fijas con su voz (para el guion de grabación en el PC). */
+export function frasesParaGrabar() {
   const out = [];
-  for (const lista of Object.values(GUION)) for (const [q, , t] of lista) out.push([q, t]);
-  return out;
+  for (const lista of Object.values(GUION)) for (const [q, , t] of lista) {
+    if (q === "sospechoso") out.push(["sospechoso_h", t], ["sospechoso_m", t]);
+    else out.push([q, t]);
+  }
+  out.push(...FRASES_EXTRA);
+  const vistos = new Set();
+  return out.filter(([q, t]) => { const k = q + "|" + t; if (vistos.has(k)) return false; vistos.add(k); return true; });
 }

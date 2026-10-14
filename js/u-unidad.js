@@ -445,9 +445,3 @@ export function vistaUnidad(main, args = {}, ctlExterno = null) {
   return ctl;
 }
 
-// frases fijas usadas fuera de GUION (también se graban)
-export const FRASES_EXTRA = [
-  ["carmen", "Este expediente sigue abierto. Léelo con calma y dime qué ves."],
-  ["sospechoso_h", "¡Por fin alguien me cree, detective!"], ["sospechoso_m", "¡Por fin alguien me cree, detective!"],
-  ["sospechoso_h", "Vaya… se lo ha creído."], ["sospechoso_m", "Vaya… se lo ha creído."],
-];
