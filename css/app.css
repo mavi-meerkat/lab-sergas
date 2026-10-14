@@ -314,3 +314,72 @@ h3.modulo { margin: 18px 0 6px; font-size: 17px; }
 .img-opcion.bien { border-color: var(--ok); background: var(--ok_bg); } .img-opcion.mal { border-color: var(--mal); background: var(--mal_bg); }
 .podcast-pantalla { min-height: 280px; } .pensar { margin-top: 10px; }
 .btn.grande.cuadrado, .vf-botones .btn.grande { width: auto; min-width: 64px; } .btn.grande.cuadrado { font-size: 22px; }
+
+/* ------------------------------------------------------------------ Unidad de Análisis (aventura gráfica) */
+.u-escena { position: relative; width: 100%; aspect-ratio: 16 / 7; max-height: 46vh; border-radius: 16px; overflow: hidden; margin: 8px 0 0; background: #111; border: 3px solid #111; }
+.u-fondo, .u-fondo svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.u-actores { position: absolute; left: 0; right: 0; bottom: -4px; display: flex; justify-content: space-around; align-items: flex-end; pointer-events: none; }
+.u-actor { width: min(26%, 210px); transition: transform .2s, filter .2s; filter: brightness(.82) saturate(.9); }
+.u-actor svg { width: 100%; height: auto; display: block; filter: drop-shadow(0 6px 10px rgba(0,0,0,.5)); }
+.u-actor.habla { transform: translateY(-6px) scale(1.04); filter: none; }
+.u-dialogo { display: flex; gap: 12px; align-items: flex-end; margin: 10px 0; cursor: pointer; user-select: none; }
+.u-retrato { width: 92px; flex: 0 0 92px; } .u-retrato svg { width: 100%; height: auto; display: block; }
+.u-retrato:empty { display: none; }
+.u-bocadillo { position: relative; flex: 1; background: #FFFDF6; color: #15110C; border: 3px solid #15110C; border-radius: 20px; padding: 10px 44px 12px 16px;
+  box-shadow: 4px 4px 0 #15110C; min-height: 64px; }
+.u-bocadillo::before { content: ""; position: absolute; left: -16px; bottom: 18px; border: 9px solid transparent; border-right: 14px solid #15110C; }
+.u-bocadillo::after { content: ""; position: absolute; left: -9px; bottom: 21px; border: 6px solid transparent; border-right: 10px solid #FFFDF6; }
+.u-nombre { font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: #8A2E1E; margin-bottom: 2px; }
+.u-dialogo.sospechoso .u-nombre { color: #2E4E8A; }
+.u-texto { font: 600 16.5px/1.45 "Comic Sans MS", "Chalkboard SE", "Comic Neue", var(--fuente); white-space: pre-wrap; }
+.u-sig { position: absolute; right: 10px; bottom: 8px; border: 0; background: #15110C; color: #FFF; width: 28px; height: 28px; border-radius: 50%; font-size: 15px; opacity: .25; cursor: pointer; }
+.u-sig.listo { opacity: 1; animation: latir 1s infinite; }
+@keyframes latir { 50% { transform: scale(1.15); } }
+.u-ficha { display: flex; gap: 16px; align-items: center; }
+.u-ficha-foto { width: 120px; flex: 0 0 120px; } .u-ficha-foto svg { width: 100%; height: auto; }
+.u-rango { font-weight: 800; font-size: 18px; color: var(--aviso); margin: 2px 0 6px; }
+.u-sedes { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.u-sede { position: relative; padding: 0; border: 3px solid #111; border-radius: 16px; overflow: hidden; cursor: pointer; aspect-ratio: 16 / 10; background: #111; transition: transform .12s; }
+.u-sede:hover { transform: translateY(-3px); }
+.u-sede-img, .u-sede-img svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.u-sede-txt { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 12px; background: linear-gradient(transparent, rgba(0,0,0,.85)); color: #FFF; display: flex; flex-direction: column; text-align: left; }
+.u-sede-txt b { font-size: 20px; }
+.u-frios-card { margin-top: 12px; }
+.u-equipo { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+.u-miembro { flex: 0 0 104px; background: var(--panel); border: 1px solid var(--borde); border-radius: 14px; padding: 6px; cursor: pointer; color: var(--tinta); }
+.u-miembro svg { width: 100%; height: auto; display: block; }
+.u-juegos { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.u-juego { display: flex; gap: 12px; align-items: flex-start; text-align: left; background: var(--panel); border: 2px solid var(--borde); border-radius: 14px; padding: 12px; cursor: pointer; color: var(--tinta); font: inherit; }
+.u-juego:hover:not(.bloqueado) { border-color: var(--acento); }
+.u-juego.bloqueado { opacity: .55; cursor: default; }
+.u-juego-ic { font-size: 28px; } .u-pronto { font-size: 11px; font-weight: 800; color: var(--aviso); text-transform: uppercase; margin-top: 4px; }
+.u-zona { margin-top: 8px; }
+.u-expediente { background: #E9DCB5; color: #2A2116; border-radius: 6px 14px 14px 14px; padding: 14px 16px; box-shadow: 0 3px 0 #B8A574; margin-bottom: 12px; position: relative; }
+.u-expediente .enunciado { color: #1D160E; }
+.u-expediente .tarjeta { background: #FFFBEF; }
+.u-exp-cab { font: 700 12px "Courier New", monospace; letter-spacing: 1px; color: #6E5A30; margin-bottom: 6px; }
+.u-exp-regla { font: 800 14px var(--fuente); color: #8A2E1E; margin-top: 6px; }
+.u-sospechosos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+@media (max-width: 900px) { .u-sospechosos { grid-template-columns: repeat(2, 1fr); } }
+.u-sospechoso { background: var(--panel); border: 3px solid var(--borde); border-radius: 16px; padding: 8px; cursor: pointer; color: var(--tinta); font: inherit; display: flex; flex-direction: column; gap: 6px; text-align: left; transition: transform .12s, border-color .12s; }
+.u-sospechoso:hover:not(:disabled) { transform: translateY(-3px); border-color: var(--aviso); }
+.u-sos-foto { background: linear-gradient(#3A4250, #1E232B); border-radius: 10px; } .u-sos-foto svg { width: 100%; height: auto; max-height: 150px; display: block; }
+.u-sos-nombre { display: flex; flex-direction: column; line-height: 1.2; }
+.u-sos-dice { background: #FFFDF6; color: #15110C; border: 2px solid #15110C; border-radius: 14px; padding: 8px 10px; font: 600 14.5px/1.35 "Comic Sans MS", "Chalkboard SE", var(--fuente); }
+.u-sospechoso.verdad { border-color: var(--ok); background: var(--ok_bg); } .u-sospechoso.miente { border-color: var(--trampa); background: var(--trampa_bg); }
+.u-sospechoso.error { border-color: var(--mal); } .u-sospechoso.apagado { opacity: .45; }
+.u-sospechoso.verdad::after { content: "✔ DICE LA VERDAD"; font-weight: 800; font-size: 12px; color: var(--ok); }
+.u-sospechoso.miente::after { content: "✘ ESTE MIENTE"; font-weight: 800; font-size: 12px; color: var(--trampa); }
+.u-carpetas { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin-top: 12px; }
+.u-carpeta { position: relative; background: #E9DCB5; color: #2A2116; border: 0; border-radius: 4px 12px 12px 12px; padding: 22px 12px 12px; text-align: left; cursor: pointer; box-shadow: 0 3px 0 #B8A574; font: inherit; display: flex; flex-direction: column; gap: 4px; }
+.u-carpeta:hover { transform: translateY(-2px); }
+.u-carpeta-pest { position: absolute; top: -10px; left: 0; background: #D9C68F; padding: 2px 10px; border-radius: 6px 6px 0 0; font: 700 11px "Courier New", monospace; }
+.u-sellos { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.u-sello { border: 2px solid #A3123A; color: #A3123A; font: 800 10.5px "Courier New", monospace; padding: 1px 5px; border-radius: 4px; transform: rotate(-3deg); }
+.u-racha { font: 700 12px "Courier New", monospace; color: #6E5A30; margin-top: 2px; }
+.u-sello-grande { font: 900 34px "Courier New", monospace; color: #A3123A; border: 5px solid #A3123A; border-radius: 10px; padding: 6px 16px; display: inline-block;
+  transform: rotate(-6deg); margin: 6px 0 12px; animation: sellar .35s ease-out; background: rgba(255,255,255,.6); }
+@keyframes sellar { from { transform: rotate(-6deg) scale(2.2); opacity: 0; } to { transform: rotate(-6deg) scale(1); opacity: 1; } }
+@media (max-width: 600px) { .u-retrato { width: 64px; flex-basis: 64px; } .u-texto { font-size: 15px; } .u-escena { aspect-ratio: 16 / 9; } }
+.u-escena.compacta { display: none; }
+.u-expediente.tira { margin-bottom: 0; border-radius: 6px 14px 0 0; padding: 8px 16px; box-shadow: none; } .u-exp-cuerpo { border-top-left-radius: 0; border-top-right-radius: 0; margin-top: 0; }

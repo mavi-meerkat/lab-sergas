@@ -178,7 +178,7 @@ function programarRefresco() {
 }
 
 // ------------------------------------------------------------------ esqueleto
-const NAV = [["inicio", "🏠", "Inicio"], ["profesor", "🎓", "Profesor"], ["repaso", "🔁", "Repaso"], ["entrena", "🎮", "Entrena"], ["examenes", "📝", "Simulacros"], ["validar", "🩺", "Por validar"], ["ajustes", "⚙", "Ajustes"]];
+const NAV = [["inicio", "🏠", "Inicio"], ["profesor", "🎓", "Profesor"], ["repaso", "🔁", "Repaso"], ["entrena", "🎮", "Entrena"], ["unidad", "🔎", "Unidad de Análisis"], ["examenes", "📝", "Simulacros"], ["validar", "🩺", "Por validar"], ["ajustes", "⚙", "Ajustes"]];
 let navBtns = {}, lblRacha, lblDias, entFecha, lblPomo, bPomo, lblSync;
 
 function construir() {
@@ -226,12 +226,24 @@ function marcarNav(clave) {
   A.actualizarNav();
 }
 
+// La Unidad de Análisis se descarga solo cuando se abre (no pesa en el arranque).
+function vistaUnidadPerezosa(main, args) {
+  const ctl = { nombre: "unidad" };
+  main.append(el("div.carga", el("div.spinner")));
+  import("./u-unidad.js").then((m) => {
+    if (A.vista !== ctl) return;
+    main.replaceChildren();
+    m.vistaUnidad(main, args, ctl);
+  }).catch((e) => { main.replaceChildren(tarjeta("bg-mal_bg", el("p", "No se pudo cargar la Unidad de Análisis: " + e.message))); });
+  return ctl;
+}
+
 A.ir = (clave, args = {}) => {
   if (A.vista && A.vista.destruir) { try { A.vista.destruir(); } catch (e) { console.error(e); } }
   while (cerrarModalSuperior()) { /* cerrar diálogos abiertos */ }
   vaciar(A.main);
   A.main.scrollTop = 0;
-  const fn = { inicio: vistaInicio, profesor: vistaProfesor, repaso: vistaRepaso, examenes: vistaExamenes, validar: vistaValidar, ajustes: vistaAjustes, leccion: vistaLeccion, entrena: vistaEntrena }[clave];
+  const fn = { inicio: vistaInicio, profesor: vistaProfesor, repaso: vistaRepaso, examenes: vistaExamenes, validar: vistaValidar, ajustes: vistaAjustes, leccion: vistaLeccion, entrena: vistaEntrena, unidad: vistaUnidadPerezosa }[clave];
   try {
     A.vista = fn(A.main, args) || { nombre: clave };
     A.vista.args = args;
