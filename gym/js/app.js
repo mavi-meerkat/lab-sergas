@@ -1,4 +1,4 @@
-import { FASES, EJ, BLOQUES, CARDIO, DIAS, NOMBRE_DIA, sesionDe } from "./data.js";
+import { FASES, EJ, BLOQUES, CARDIO, CARDIO_LIBRE, DIAS, NOMBRE_DIA, sesionDe } from "./data.js";
 import * as db from "./store.js";
 import { animar, svgEstatico, pararAnimaciones } from "./figuras.js";
 
@@ -41,7 +41,7 @@ function cortoPeso(id, v) {
 }
 const serieTxt = (id, x) => { const p = cortoPeso(id, x.kg); return p ? `${p}×${x.reps}` : `${x.reps} reps`; };
 const ETQ_PESO = { mancuerna: "kg", discos: "+ kg discos", placas: "placa" };
-const VERSION_APP = "11 · 14 oct";
+const VERSION_APP = "12 · 14 oct";
 const SERIE_SEG = 40; // tiempo estimado de trabajo por serie
 // Alternos (1 rep = los dos brazos) y unilaterales (todas las reps con una pierna y luego la otra) duran el doble.
 const segSerie = (e) => SERIE_SEG * (e && EJ[e.id]?.doble ? 2 : 1);
@@ -222,7 +222,7 @@ function vPlan(sem) {
       cuerpo = `<p class="suave">${esc(repartoTxt(p))}</p>${p.intro ? `<p class="intro">${esc(p.intro)}</p>` : ""}<ul class="lista">${p.ejercicios.map((e) =>
         `<li><a href="#/ej/${e.id}/${sem}" class="ejrow"><div class="thumb">${svgEstatico(e.id)}</div><div><b>${esc(e.nombre)}</b><span>${esc(e.zona)}${e.detalle ? " · " + esc(e.detalle) : ""}</span></div></a></li>`).join("")}</ul>`;
     } else {
-      cuerpo = `<p class="intro">${esc(p.intro)}</p>${tablaCardio(p.bloques)}${p.nota ? `<p class="nota">${esc(p.nota)}</p>` : ""}`;
+      cuerpo = `${tablaCardio(p.bloques)}<p class="nota">En el bloque principal eliges tú la velocidad y la inclinación mientras entrenas.</p>`;
     }
     return `<details class="card dplan" ${d === db.diaISO(new Date()) ? "open" : ""}><summary><span class="etq">${NOMBRE_DIA[d]}</span><b>${esc(p.titulo)}</b><em>≈ ${Math.round(estimar(p) / 60)} min</em></summary>${cuerpo}</details>`;
   }).join("");
@@ -270,9 +270,9 @@ function vProgreso() {
   }).join("") : `<li class="suave vacio">Cuando completes tu primer entreno verás aquí tus pesos y cómo evolucionan.</li>`;
   const hist = ses.slice(0, 30).map((s) => {
     const p = sesionDe(s.dia, s.semana);
-    const dur = s.fin && s.inicio ? Math.round((s.fin - s.inicio) / 60000) + " min" : s.cardio?.hecho ? Math.round(estimar(p) / 60) + " min" : "en curso";
+    const dur = s.fin && s.inicio ? Math.round((s.fin - s.inicio) / 60000) + " min" : s.cardio?.hecho ? (s.cardio.minutos ?? Math.round(estimar(p) / 60)) + " min" : "en curso";
     const dif = s.cardio?.dif;
-    return `<li class="sesli"><a href="#/entreno/${s.fecha}" class="sesrow"><i style="background:${fase(s.semana).color}"></i><div><b>${esc(p.titulo)}</b><span>${NOMBRE_DIA[db.diaISO(db.parse(s.fecha))]} ${db.fechaCorta(s.fecha)} · Semana ${s.semana} · ${dur}</span></div>${dif ? `<span class="dif ${dif}">${DIF[dif]}</span>` : ""}</a><button class="papelera" data-act="borrarSes" data-f="${s.fecha}" aria-label="Eliminar este entreno">🗑</button></li>`;
+    return `<li class="sesli"><a href="#/entreno/${s.fecha}" class="sesrow"><i style="background:${fase(s.semana).color}"></i><div><b>${esc(p.titulo)}</b><span>${NOMBRE_DIA[db.diaISO(db.parse(s.fecha))]} ${db.fechaCorta(s.fecha)} · Semana ${s.semana} · ${dur}</span>${p.tipo === "cardio" && s.cardio?.tramos?.length ? `<span class="tramotxt">${esc(textoCardio(s.cardio, p))}</span>` : ""}</div>${dif ? `<span class="dif ${dif}">${DIF[dif]}</span>` : ""}</a><button class="papelera" data-act="borrarSes" data-f="${s.fecha}" aria-label="Eliminar este entreno">🗑</button></li>`;
   }).join("");
   ponFase(db.infoSemana().semana);
   const cs = ciclos().reverse().map((c) => `<li><a href="#/ciclo/${c.regla}" class="sesrow"><i style="background:${FASES[0].color}"></i><div><b>Ciclo del ${db.fechaCorta(c.regla)}</b><span>${c.siguiente ? "hasta el " + db.fechaCorta(db.sumaDias(c.siguiente, -1)) : "en curso"}</span></div><span class="flecha">›</span></a></li>`).join("");
@@ -375,7 +375,7 @@ function vEntreno(fecha) {
   if (plan.tipo === "descanso") return `<a class="volver" href="#/hoy">‹ Hoy</a><section class="card"><h2>Día de descanso</h2></section>`;
   const s = ses || db.crearSesion(fecha, dia, semana);
   const empezado = s.inicio || s.fin || s.cardio?.inicio || Object.values(s.ej || {}).some((r) => r.series?.some((x) => x.hecho));
-  if (!s.energia && !empezado) return vEnergia(s, plan);
+  if (!s.energia && !empezado && plan.tipo !== "cardio") return vEnergia(s, plan);
   return plan.tipo === "cardio" ? vCardio(s, plan) : vFuerza(s, plan);
 }
 const ENERGIA = { alta: "⚡ Con energía", normal: "🙂 Normal", baja: "🪫 Con poca energía" };
@@ -506,29 +506,85 @@ function resumenFuerza(s, p) {
   return `<section class="card resumen"><h3>✓ Entreno completado · ${dur} min</h3><ul class="lista compacta">${filas}</ul><p class="nota">Puedes corregir cualquier dato tocando el número del ejercicio arriba.</p>${avisoCopia(s)}<a class="btn" href="#/hoy">Volver a Hoy</a><button class="btn borrar" data-act="borrarSes" data-f="${s.fecha}">🗑 Eliminar este entreno</button></section>`;
 }
 
-// --- Cardio ---
+// --- Cardio libre ---
+const f1c = (n) => (+n).toFixed(1).replace(".", ",");
 function cardioTiempos(p) { let acc = 0; return p.bloques.map((b) => { const ini = acc; acc += b.min * 60; return { ...b, ini, fin: acc }; }); }
 function cardioTrans(c) { if (!c?.inicio) return 0; const ahora = c.pausa || Date.now(); return (ahora - c.inicio - (c.pausado || 0)) / 1000 + (c.salto || 0); }
+const faseDe = (bl, t) => bl.find((b) => t < b.fin) || bl[bl.length - 1];
+// Minutos por combinación de velocidad e inclinación en el bloque principal
+function combosCardio(c, p) {
+  const bl = cardioTiempos(p), pri = bl[1], tr = c?.tramos || [];
+  if (!tr.length) return [];
+  const tPri = Math.min(pri.min * 60, Math.max(0, Math.min(cardioTrans(c), bl[2].fin) - pri.ini));
+  const m = new Map();
+  tr.forEach((x, i) => { const hasta = i < tr.length - 1 ? tr[i + 1].desde : tPri; const k = `${x.vel}|${x.inc}`; m.set(k, (m.get(k) || 0) + Math.max(0, hasta - x.desde)); });
+  return [...m.entries()].map(([k, sg]) => { const [v, i] = k.split("|"); return { vel: +v, inc: +i, s: sg }; }).filter((x) => x.s >= 1);
+}
+const minTxt = (sg) => (sg >= 60 ? `${Math.round(sg / 60)} min` : `${Math.round(sg)} s`);
+function textoCardio(c, p) { return combosCardio(c, p).map((x) => `${minTxt(x.s)} a ${f1c(x.vel)} km/h · ${x.inc} %`).join(" · "); }
+
 function vCardio(s, p) {
-  const bl = cardioTiempos(p), total = bl[bl.length - 1].fin;
-  const c = s.cardio || {};
-  const barra = bl.map((b, k) => `<i style="flex:${b.min}" class="${/Subida|principal/.test(b.tipo) ? "fuerte" : ""}" data-b="${k}"></i>`).join("");
-  const lista = bl.map((b, k) => `<li data-b="${k}"><span>${mmss(b.ini)}</span><b>${esc(b.tipo)}</b><em>${b.min}′</em><em>${b.vel} km/h</em><em>${b.inc} %</em></li>`).join("");
+  const bl = cardioTiempos(p), total = bl[2].fin, c = s.cardio || {};
+  const t = Math.min(total, cardioTrans(c)), fa = faseDe(bl, t), pri = bl[1];
+  const vel = c.vel ?? 5.0, inc = c.inc ?? 5;
+  const enPri = c.inicio && !c.hecho && fa.id === "pri";
+  const priAcabado = c.inicio && (c.hecho || t >= pri.fin);
+  const incFig = !c.inicio || fa.id === "cal" ? CARDIO_LIBRE.cal.inc : fa.id === "enf" ? CARDIO_LIBRE.enf.inc : inc;
+  const tPri = Math.max(0, Math.min(pri.min * 60, t - pri.ini));
+  const tramos = (c.tramos || []).map((x, i, arr) => {
+    const hasta = i < arr.length - 1 ? arr[i + 1].desde : tPri, actual = i === arr.length - 1 && enPri;
+    return `<li class="${actual ? "actual" : ""}"><i>Tramo ${i + 1}<br>min ${mmss(x.desde)}</i><span>${f1c(x.vel)} km/h · ${x.inc} %</span><em ${actual ? "data-tdur" : ""}>${mmss(hasta - x.desde)}</em></li>`;
+  }).join("");
+  const sel = (id, val, uni) => `<div class="csel"><button data-act="cMas" data-t="${id}" data-d="-1">−</button><button class="val" data-act="cHoja" data-t="${id}">${val}<small> ${uni}</small></button><button data-act="cMas" data-t="${id}" data-d="1">+</button></div>`;
+  const fijo = (F, txt) => `<div class="fijo"><div><b>${f1c(F.vel)}</b><span>km/h</span></div><div><b>${F.inc} %</b><span>inclinación</span></div></div><p class="nota centro">${txt}</p>`;
   const ctrl = c.hecho ? "" : !c.inicio ? `<button class="btn" data-act="cGo">Empezar</button>`
-    : `<button class="btn sec" data-act="cPausa">${c.pausa ? "Reanudar" : "Pausa"}</button><button class="btn sec" data-act="cSalta">Saltar bloque ›</button>`;
-  return `<header class="wbar"><button class="x" data-act="salir" aria-label="Salir">✕</button><div class="wt"><b>${esc(p.titulo)} · ${Math.round(total / 60)} min</b><span>Semana ${s.semana} · ${esc(p.subtitulo)}</span></div><div class="reloj"><b data-ctot>${mmss(cardioTrans(c))}</b><span>de ${mmss(total)}</span></div></header>
+    : `<button class="btn sec" data-act="cPausa">${c.pausa ? "Reanudar" : "Pausa"}</button><button class="btn sec" data-act="cSalta">Saltar fase ›</button>`;
+  const combos = combosCardio(c, p);
+  const resumen = c.hecho ? `<section class="card difsel"><h3>${c.dif ? "✓ Cardio completado" : "¡Hecho! ¿Cómo te ha resultado?"}</h3>
+      <ul class="lista compacta resum"><li><span>Calentamiento</span><b>${CARDIO_LIBRE.cal.min} min · ${f1c(CARDIO_LIBRE.cal.vel)} km/h · ${CARDIO_LIBRE.cal.inc} %</b></li>
+      ${combos.length ? combos.map((x) => `<li><span>Bloque principal</span><b>${minTxt(x.s)} · ${f1c(x.vel)} km/h · ${x.inc} %</b></li>`).join("") : `<li><span>Bloque principal</span><b>sin datos</b></li>`}
+      <li><span>Enfriamiento</span><b>${CARDIO_LIBRE.enf.min} min · ${f1c(CARDIO_LIBRE.enf.vel)} km/h · ${CARDIO_LIBRE.enf.inc} %</b></li></ul>
+      <div class="difs">${Object.entries(DIF).map(([k, tx]) => `<button class="dif ${k} ${c.dif === k ? "on" : ""}" data-act="cDif" data-v="${k}">${tx}</button>`).join("")}</div>
+      ${c.dif ? `${avisoCopia(s)}<a class="btn" href="#/hoy">Volver a Hoy</a>` : ""}<button class="btn borrar" data-act="borrarSes" data-f="${s.fecha}">🗑 Eliminar este entreno</button></section>` : "";
+  return `<header class="wbar"><button class="x" data-act="salir" aria-label="Salir">✕</button><div class="wt"><b>${esc(p.titulo)} · ${Math.round(total / 60)} min</b><span>Semana ${s.semana} · ${fase(s.semana).nombre}</span></div><div class="reloj"><b data-ctot>${mmss(t)}</b><span>de ${mmss(total)}</span></div></header>
+    ${resumen}
     <section class="card cardiocard">
-      <div class="bigfig" data-fig="cinta"></div>
-      <div class="cbloque"><div class="etq" data-cnombre>${esc(bl[0].tipo)}</div><div class="cuenta" data-ccuenta>${mmss(bl[0].min * 60)}</div>
-        <div class="pauta"><div><b data-cvel>${bl[0].vel}</b><span>km/h</span></div><div><b data-cinc>${bl[0].inc} %</b><span>inclinación</span></div></div>
-        <p class="suave" data-csig></p></div>
-      <div class="cbar">${barra}<u data-cprog></u></div>
+      <div class="bigfig" data-fig="cinta" style="--inc:${incFig}"></div>
+      <div class="fases">${bl.map((f) => `<div style="flex:${Math.max(f.min, 9)}" class="${f.id === fa.id && c.inicio && !c.hecho ? "on" : ""} ${c.inicio && t >= f.fin ? "ok" : ""}"><b>${f.id === "cal" ? "Calentar" : f.id === "enf" ? "Enfriar" : "Bloque principal"}</b><span>${f.min} min</span><u data-fu="${f.id}" style="width:${c.inicio ? Math.min(100, Math.max(0, ((t - f.ini) / (f.fin - f.ini)) * 100)) : 0}%"></u></div>`).join("")}</div>
+      ${c.hecho ? `<p class="etq centro">Completado</p>` : `<div class="etq centro">${c.inicio ? fa.tipo : "Preparada"}</div><div class="cuenta" data-ccuenta>${mmss(c.inicio ? fa.fin - t : bl[0].fin)}</div>`}
+      ${!c.hecho && (!c.inicio || fa.id === "cal") ? fijo(CARDIO_LIBRE.cal, "Calentamiento fijo: 2 min a 4,0 km/h y 2 %") : ""}
+      ${!c.hecho && c.inicio && fa.id === "enf" ? fijo(CARDIO_LIBRE.enf, "Enfriamiento fijo: 2 min a 3,0 km/h y 0 %") : ""}
       <div class="wfoot dentro">${ctrl}</div>
     </section>
-    ${c.hecho ? `<section class="card difsel"><h3>${c.dif ? "✓ Cardio completado" : "¡Hecho! ¿Cómo te ha resultado?"}</h3><div class="difs">${Object.entries(DIF).map(([k, t]) => `<button class="dif ${k} ${c.dif === k ? "on" : ""}" data-act="cDif" data-v="${k}">${t}</button>`).join("")}</div>${c.dif ? `${avisoCopia(s)}<a class="btn" href="#/hoy">Volver a Hoy</a>` : ""}<button class="btn borrar" data-act="borrarSes" data-f="${s.fecha}">🗑 Eliminar este entreno</button></section>` : ""}
-    ${consejoEnergia(s, "cardio") ? `<p class="nota energia-nota">${esc(consejoEnergia(s, "cardio"))}</p>` : ""}
-    <section class="card"><p class="intro">${esc(p.intro)}</p>${p.nota ? `<p class="nota">${esc(p.nota)}</p>` : ""}<ul class="cblist">${lista}</ul>
-    ${c.inicio && !c.hecho ? `<button class="mini" data-act="cFin">Terminar ya</button>` : ""}</section>`;
+    <section class="card bloque ${enPri ? "activo" : ""}">
+      <h3>Bloque principal · ${pri.min} min</h3>
+      <p class="suave chico">${enPri ? "Elige lo que estás haciendo ahora en la cinta." : priAcabado ? "Bloque terminado." : "Puedes dejarlo elegido antes de que empiece."}</p>
+      ${priAcabado ? "" : `<div class="selrow"><span>Velocidad</span>${sel("vel", f1c(vel), "km/h")}</div><div class="selrow"><span>Inclinación</span>${sel("inc", inc, "%")}</div>`}
+      ${tramos ? `<ul class="tramos">${tramos}</ul>` : ""}
+    </section>
+    ${c.hecho ? "" : `<button class="btn nuevos" data-act="cNuevos" ${enPri ? "" : "disabled"}>＋ Nuevos parámetros</button>
+    <p class="nota centro" data-tpri>${enPri ? `Marca el minuto ${mmss(tPri)} del bloque y empieza un tramo nuevo.` : "Se activa durante el bloque principal."}</p>`}
+    <section class="card"><h3>Enfriamiento · ${CARDIO_LIBRE.enf.min} min</h3><p class="suave chico">Fijo: 3,0 km/h y 0 %</p>
+    ${c.inicio && !c.hecho ? `<button class="mini" data-act="cFin">Terminar ya</button>` : ""}</section>
+    <div id="hoja" class="hoja" hidden></div>`;
+}
+function abrirHojaCardio(tipo, s) {
+  const h = document.getElementById("hoja"); if (!h) return;
+  const R = CARDIO_LIBRE[tipo], vals = [];
+  for (let x = R.min; x <= R.max + 1e-9; x += R.paso) vals.push(Math.round(x * 10) / 10);
+  const actual = s.cardio?.[tipo] ?? (tipo === "vel" ? 5.0 : 5);
+  h.innerHTML = `<div class="hcont"><div class="hcab"><b>${tipo === "vel" ? "Velocidad (km/h)" : "Inclinación (%)"}</b><button class="mini" data-act="hojaCerrar">Cerrar</button></div>
+    <div class="hgrid">${vals.map((v) => `<button class="hv ${Math.abs(v - actual) < 1e-9 ? "on" : ""}" data-act="cPon" data-t="${tipo}" data-v="${v}">${tipo === "vel" ? f1c(v) : v}</button>`).join("")}</div></div>`;
+  h.hidden = false; h.querySelector(".hv.on")?.scrollIntoView({ block: "center" });
+}
+// Cambiar velocidad/inclinación corrige el tramo en curso; "Nuevos parámetros" abre uno nuevo.
+function ponCardio(s, p, tipo, v) {
+  const R = CARDIO_LIBRE[tipo];
+  s.cardio = s.cardio || {};
+  s.cardio[tipo] = Math.min(R.max, Math.max(R.min, Math.round(v * 10) / 10));
+  const c = s.cardio, bl = cardioTiempos(p), t = cardioTrans(c);
+  if (c.inicio && !c.hecho && faseDe(bl, t).id === "pri" && c.tramos?.length) { const tr = c.tramos[c.tramos.length - 1]; tr.vel = c.vel ?? 5.0; tr.inc = c.inc ?? 5; }
+  db.guardar(); render();
 }
 
 // ---------- Montaje, temporizadores y eventos ----------
@@ -547,7 +603,7 @@ function montar(r, a) {
   }
 }
 
-let ultimoBloque = -1, ultimoAviso = -1, aviso10 = -1;
+let ultimoBloque = -1, ultimoAviso = -1, aviso10 = -1, faseCardio = "";
 function tickEntreno(fecha) {
   const { ses: s, plan: p } = planDe(fecha);
   if (!s) return;
@@ -555,36 +611,30 @@ function tickEntreno(fecha) {
   if (rel && s.inicio && !s.fin) rel.textContent = mmss((Date.now() - s.inicio) / 1000);
   if (p.tipo === "fuerza") return tickDescanso(s, p);
   // cardio
-  const bl = cardioTiempos(p), total = bl[bl.length - 1].fin;
-  const c = s.cardio || {};
-  let t = Math.min(total, cardioTrans(c));
-  const k = Math.max(0, bl.findIndex((b) => t < b.fin));
-  const b = bl[k === -1 ? bl.length - 1 : k];
+  const bl = cardioTiempos(p), total = bl[2].fin, c = s.cardio || {};
+  const t = Math.min(total, cardioTrans(c)), fa = faseDe(bl, t);
   const q = (sel) => document.querySelector(sel);
-  const fig = q('.cardiocard [data-fig="cinta"]');
-  if (fig) fig.style.setProperty("--inc", parseFloat(b.inc) || 0);
   if (q("[data-ctot]")) q("[data-ctot]").textContent = mmss(t);
-  if (q("[data-cnombre]")) q("[data-cnombre]").textContent = `${b.tipo} · bloque ${bl.indexOf(b) + 1} de ${bl.length}`;
-  if (q("[data-ccuenta]")) q("[data-ccuenta]").textContent = mmss(b.fin - t);
-  if (q("[data-cvel]")) q("[data-cvel]").textContent = b.vel;
-  if (q("[data-cinc]")) q("[data-cinc]").textContent = b.inc + " %";
-  const sig = bl[bl.indexOf(b) + 1];
-  const quedaBloque = Math.ceil(b.fin - t);
-  const pronto = sig && c.inicio && !c.hecho && quedaBloque <= 10;
-  const cs = q("[data-csig]");
-  if (cs) {
-    cs.textContent = sig ? (pronto ? `En ${quedaBloque} s cambia a ${sig.vel} km/h · ${sig.inc} %` : `Después: ${sig.tipo} · ${sig.vel} km/h · ${sig.inc} %`) : "Último bloque";
-    cs.classList.toggle("pronto", !!pronto);
+  if (!c.inicio || c.hecho) return;
+  if (q("[data-ccuenta]")) q("[data-ccuenta]").textContent = mmss(fa.fin - t);
+  for (const f of bl) { const u = q(`[data-fu="${f.id}"]`); if (u) u.style.width = Math.min(100, Math.max(0, ((t - f.ini) / (f.fin - f.ini)) * 100)) + "%"; }
+  if (fa.id === "pri") {
+    const tPri = t - bl[1].ini, tr = c.tramos?.[c.tramos.length - 1];
+    if (tr && q("[data-tdur]")) q("[data-tdur]").textContent = mmss(tPri - tr.desde);
+    if (q("[data-tpri]")) q("[data-tpri]").textContent = `Marca el minuto ${mmss(tPri)} del bloque y empieza un tramo nuevo.`;
   }
-  if (q("[data-cprog]")) q("[data-cprog]").style.left = (t / total) * 100 + "%";
-  document.querySelectorAll(".cblist li").forEach((li) => { const j = +li.dataset.b; li.className = j < bl.indexOf(b) || c.hecho ? "pasado" : j === bl.indexOf(b) && c.inicio ? "actual" : ""; });
-  if (!c.inicio || c.pausa || c.hecho) return;
-  const idx = bl.indexOf(b), resto = Math.ceil(b.fin - t);
-  if (sig && resto <= 10 && resto > 4 && aviso10 !== idx) { aviso10 = idx; pitido(784, 0.12); pitido(784, 0.12, 0.18); destello(); }
-  if (resto <= 4 && resto > 0 && ultimoAviso !== idx * 10 + resto) { ultimoAviso = idx * 10 + resto; bipCuenta(); }
-  if (ultimoBloque !== -1 && idx !== ultimoBloque) { pitidoFin(); destello(); }
-  ultimoBloque = idx;
-  if (t >= total) { c.hecho = true; s.cardio = c; db.guardar(); pitidoFin(); destello(); mantenerPantalla(false); render(); }
+  if (c.pausa) return;
+  // Al entrar en el bloque principal se abre el primer tramo con lo que tengas elegido
+  if (fa.id === "pri" && !c.tramos?.length) { c.tramos = [{ desde: 0, vel: c.vel ?? 5.0, inc: c.inc ?? 5 }]; db.guardar(); }
+  // Pitidos en los últimos 4 s del calentamiento y del bloque principal; al acabarlos, pitido final + destello
+  const resto = Math.ceil(fa.fin - t);
+  if ((fa.id === "cal" || fa.id === "pri") && resto <= 4 && resto > 0 && ultimoAviso !== fa.id + resto) { ultimoAviso = fa.id + resto; bipCuenta(); }
+  if (faseCardio && fa.id !== faseCardio) {
+    if (faseCardio === "cal" || faseCardio === "pri") { pitidoFin(); destello(); }
+    faseCardio = fa.id; render(); return;
+  }
+  faseCardio = fa.id;
+  if (t >= total) { c.hecho = true; c.pausa = Date.now(); c.minutos = Math.round(t / 60); s.cardio = c; db.guardar(); mantenerPantalla(false); render(); }
 }
 
 function tickDescanso(s, p) {
@@ -726,15 +776,27 @@ $app.addEventListener("click", async (ev) => {
     }
     case "dSalta": s.descanso = null; db.guardar(); tickDescanso(s, p); return;
     // cardio
-    case "cGo": s.cardio = { inicio: Date.now(), pausado: 0, pausa: null, salto: 0 }; ultimoBloque = -1; db.guardar(); mantenerPantalla(true); render(); return;
+    case "cGo": {
+      const prev = s.cardio || {};
+      s.cardio = { inicio: Date.now(), pausado: 0, pausa: null, salto: 0, vel: prev.vel ?? 5.0, inc: prev.inc ?? 5, tramos: [] };
+      faseCardio = "cal"; ultimoAviso = -1; db.guardar(); mantenerPantalla(true); render(); return;
+    }
     case "cPausa": {
       const c = s.cardio; if (c.pausa) { c.pausado += Date.now() - c.pausa; c.pausa = null; mantenerPantalla(true); } else c.pausa = Date.now();
       db.guardar(); render(); return;
     }
     case "cSalta": {
-      const bl = cardioTiempos(p), t = cardioTrans(s.cardio), b = bl.find((x) => t < x.fin);
-      if (b) s.cardio.salto = (s.cardio.salto || 0) + (b.fin - t) + 0.05;
-      db.guardar(); return;
+      const bl = cardioTiempos(p), t = cardioTrans(s.cardio), f = faseDe(bl, t);
+      s.cardio.salto = (s.cardio.salto || 0) + (f.fin - t) + 0.05; db.guardar(); return;
+    }
+    case "cMas": { const tp = el.dataset.t, R = CARDIO_LIBRE[tp], act = s.cardio?.[tp] ?? (tp === "vel" ? 5.0 : 5); ponCardio(s, p, tp, act + (+el.dataset.d) * R.paso); return; }
+    case "cHoja": abrirHojaCardio(el.dataset.t, s); return;
+    case "cPon": document.getElementById("hoja").hidden = true; ponCardio(s, p, el.dataset.t, +el.dataset.v); return;
+    case "cNuevos": {
+      const c = s.cardio, bl = cardioTiempos(p), t = cardioTrans(c);
+      if (faseDe(bl, t).id !== "pri") return;
+      c.tramos = c.tramos || []; c.tramos.push({ desde: t - bl[1].ini, vel: c.vel ?? 5.0, inc: c.inc ?? 5 });
+      db.guardar(); render(); toast(`Tramo ${c.tramos.length} desde el min ${mmss(t - bl[1].ini)}`); return;
     }
     case "cFin": if (confirm("¿Terminar el cardio ahora?")) { s.cardio.hecho = true; s.cardio.pausa = s.cardio.pausa || Date.now(); s.cardio.minutos = Math.round(cardioTrans(s.cardio) / 60); db.guardar(); mantenerPantalla(false); render(); } return;
     case "cDif": s.cardio.dif = el.dataset.v; db.guardar(); render(); return;

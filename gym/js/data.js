@@ -129,6 +129,15 @@ export const CARDIO = {
   },
 };
 
+// Cardio libre (sustituye a los bloques predefinidos por semana)
+export const CARDIO_LIBRE = {
+  cal: { min: 2, vel: 4.0, inc: 2 },
+  enf: { min: 2, vel: 3.0, inc: 0 },
+  principal: { s1: 25, s2: 45 },
+  vel: { min: 4.0, max: 7.0, paso: 0.1 },
+  inc: { min: 0, max: 8, paso: 1 },
+};
+
 // Lunes=1 … domingo=7
 export const DIAS = {
   1: { tipo: "fuerza", bloque: "A" },
@@ -149,9 +158,15 @@ export function sesionDe(dia, semana) {
       ejercicios: s.ej.map((x) => ({ ...x, ...EJ[x.id] })) };
   }
   if (d.tipo === "cardio") {
-    const c = CARDIO[semana];
-    return { tipo: "cardio", key: `${d.sesion}-${semana}`, titulo: d.sesion === "s1" ? "Cardio corto" : "Cardio largo", subtitulo: c.lema,
-      intro: c.intro, bloques: c[d.sesion], nota: d.sesion === "s2" ? c.notaS2 : "" };
+    // Cardio libre: calentamiento y enfriamiento fijos; en el bloque principal eliges velocidad e inclinación.
+    const min = CARDIO_LIBRE.principal[d.sesion];
+    return { tipo: "cardio", key: d.sesion, sesion: d.sesion, titulo: d.sesion === "s1" ? "Cardio corto" : "Cardio largo", subtitulo: "Calentamiento · bloque libre · enfriamiento",
+      intro: "", nota: "",
+      bloques: [
+        { id: "cal", tipo: "Calentamiento", min: CARDIO_LIBRE.cal.min, vel: "4,0", inc: "2" },
+        { id: "pri", tipo: "Bloque principal", min, vel: "4,0–7,0", inc: "0–8" },
+        { id: "enf", tipo: "Enfriamiento", min: CARDIO_LIBRE.enf.min, vel: "3,0", inc: "0" },
+      ] };
   }
   return { tipo: "descanso", key: "descanso", titulo: "Descanso" };
 }

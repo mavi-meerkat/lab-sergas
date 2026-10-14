@@ -240,3 +240,30 @@ button,input,.step,.serie{touch-action:manipulation}
 .toast.accion{display:flex;align-items:center;gap:14px;padding:10px 10px 10px 18px}
 .toast.accion button{border:0;background:var(--acc);color:#fff;border-radius:10px;padding:8px 12px;font-weight:750;font-size:15px;cursor:pointer}
 .toast.accion span{white-space:nowrap}
+
+/* Cardio libre */
+.fases{display:flex;gap:4px;margin:12px 0 6px}
+.fases div{border-radius:12px;padding:8px 6px;text-align:center;background:var(--soft);position:relative;overflow:hidden}
+.fases div b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fases div span{font-size:12px;color:var(--txt2)}
+.fases div.on{outline:2.5px solid var(--acc)}.fases div.ok{opacity:.55}
+.fases u{position:absolute;left:0;bottom:0;height:4px;background:var(--acc)}
+.centro{text-align:center}.chico{font-size:14px;margin:0}
+.fijo{display:flex;gap:8px;margin-top:10px}.fijo div{flex:1;background:var(--soft);border-radius:14px;padding:10px;text-align:center}
+.fijo b{display:block;font-size:20px}.fijo span{font-size:12px;color:var(--txt2)}
+.selrow{display:grid;grid-template-columns:96px 1fr;align-items:center;gap:10px;margin:10px 0}
+.selrow > span{font-weight:700;font-size:14px;color:var(--txt2)}
+.csel{display:grid;grid-template-columns:52px 1fr 52px;height:58px;background:var(--soft);border-radius:14px;align-items:center}
+.csel button{border:0;background:transparent;font-size:26px;height:100%;color:var(--txt2);cursor:pointer}
+.csel .val{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--txt)}
+.csel .val small{font-size:14px;font-weight:600;color:var(--txt2)}
+.bloque.activo{outline:2.5px solid var(--acc)}
+.tramos{list-style:none;padding:0;margin:12px 0 0}
+.tramos li{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:9px 10px;border-radius:12px;background:var(--soft);margin-top:6px;font-size:14px}
+.tramos li.actual{background:color-mix(in srgb,var(--acc) 16%,var(--soft));font-weight:700}
+.tramos li i{font-style:normal;color:var(--txt2);font-size:12px;font-variant-numeric:tabular-nums}
+.tramos li em{font-style:normal;font-variant-numeric:tabular-nums}
+.btn.nuevos{margin-top:12px}
+.resum li{display:flex;justify-content:space-between;gap:8px}
+.resum li b{font-variant-numeric:tabular-nums;font-size:14px}
+.sesrow .tramotxt{color:var(--acc);font-size:12px}
+.cardiocard .cuenta{text-align:center}
