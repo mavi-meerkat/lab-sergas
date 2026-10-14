@@ -232,3 +232,11 @@ u.facil{background:var(--facil)}u.normal{background:var(--normal)}u.dificil{back
 /* Evita el zoom por doble toque y el zoom automático de iOS al escribir (texto >= 16px) */
 input,select,textarea{font-size:16px}
 button,input,.step,.serie{touch-action:manipulation}
+
+/* Eliminar entreno */
+.sesli{display:flex;align-items:center;gap:6px}.sesli .sesrow{flex:1;min-width:0}
+.papelera{width:40px;height:40px;border:0;border-radius:12px;background:var(--soft);font-size:17px;cursor:pointer;flex-shrink:0}
+.btn.borrar{background:transparent;color:var(--dificil);border:1.5px solid currentColor;min-height:46px;font-size:15px}
+.toast.accion{display:flex;align-items:center;gap:14px;padding:10px 10px 10px 18px}
+.toast.accion button{border:0;background:var(--acc);color:#fff;border-radius:10px;padding:8px 12px;font-weight:750;font-size:15px;cursor:pointer}
+.toast.accion span{white-space:nowrap}

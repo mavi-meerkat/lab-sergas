@@ -41,7 +41,7 @@ function cortoPeso(id, v) {
 }
 const serieTxt = (id, x) => { const p = cortoPeso(id, x.kg); return p ? `${p}×${x.reps}` : `${x.reps} reps`; };
 const ETQ_PESO = { mancuerna: "kg", discos: "+ kg discos", placas: "placa" };
-const VERSION_APP = "10 · 13 oct";
+const VERSION_APP = "11 · 14 oct";
 const SERIE_SEG = 40; // tiempo estimado de trabajo por serie
 // Alternos (1 rep = los dos brazos) y unilaterales (todas las reps con una pierna y luego la otra) duran el doble.
 const segSerie = (e) => SERIE_SEG * (e && EJ[e.id]?.doble ? 2 : 1);
@@ -272,7 +272,7 @@ function vProgreso() {
     const p = sesionDe(s.dia, s.semana);
     const dur = s.fin && s.inicio ? Math.round((s.fin - s.inicio) / 60000) + " min" : s.cardio?.hecho ? Math.round(estimar(p) / 60) + " min" : "en curso";
     const dif = s.cardio?.dif;
-    return `<li><a href="#/entreno/${s.fecha}" class="sesrow"><i style="background:${fase(s.semana).color}"></i><div><b>${esc(p.titulo)}</b><span>${NOMBRE_DIA[db.diaISO(db.parse(s.fecha))]} ${db.fechaCorta(s.fecha)} · Semana ${s.semana} · ${dur}</span></div>${dif ? `<span class="dif ${dif}">${DIF[dif]}</span>` : ""}</a></li>`;
+    return `<li class="sesli"><a href="#/entreno/${s.fecha}" class="sesrow"><i style="background:${fase(s.semana).color}"></i><div><b>${esc(p.titulo)}</b><span>${NOMBRE_DIA[db.diaISO(db.parse(s.fecha))]} ${db.fechaCorta(s.fecha)} · Semana ${s.semana} · ${dur}</span></div>${dif ? `<span class="dif ${dif}">${DIF[dif]}</span>` : ""}</a><button class="papelera" data-act="borrarSes" data-f="${s.fecha}" aria-label="Eliminar este entreno">🗑</button></li>`;
   }).join("");
   ponFase(db.infoSemana().semana);
   const cs = ciclos().reverse().map((c) => `<li><a href="#/ciclo/${c.regla}" class="sesrow"><i style="background:${FASES[0].color}"></i><div><b>Ciclo del ${db.fechaCorta(c.regla)}</b><span>${c.siguiente ? "hasta el " + db.fechaCorta(db.sumaDias(c.siguiente, -1)) : "en curso"}</span></div><span class="flecha">›</span></a></li>`).join("");
@@ -503,7 +503,7 @@ function avisoCopia(s) {
 function resumenFuerza(s, p) {
   const dur = Math.round((s.fin - (s.inicio || s.fin)) / 60000);
   const filas = p.ejercicios.map((e, k) => { const r = s.ej[k] || { series: [] }; const ok = (r.series || []).filter((x) => x.hecho); return `<li><b>${esc(e.nombre)}</b><span>${ok.length ? ok.map((x) => serieTxt(e.id, x)).join(" · ") : "sin registrar"}</span>${r.dif ? `<span class="dif ${r.dif}">${DIF[r.dif]}</span>` : ""}</li>`; }).join("");
-  return `<section class="card resumen"><h3>✓ Entreno completado · ${dur} min</h3><ul class="lista compacta">${filas}</ul><p class="nota">Puedes corregir cualquier dato tocando el número del ejercicio arriba.</p>${avisoCopia(s)}<a class="btn" href="#/hoy">Volver a Hoy</a></section>`;
+  return `<section class="card resumen"><h3>✓ Entreno completado · ${dur} min</h3><ul class="lista compacta">${filas}</ul><p class="nota">Puedes corregir cualquier dato tocando el número del ejercicio arriba.</p>${avisoCopia(s)}<a class="btn" href="#/hoy">Volver a Hoy</a><button class="btn borrar" data-act="borrarSes" data-f="${s.fecha}">🗑 Eliminar este entreno</button></section>`;
 }
 
 // --- Cardio ---
@@ -525,7 +525,7 @@ function vCardio(s, p) {
       <div class="cbar">${barra}<u data-cprog></u></div>
       <div class="wfoot dentro">${ctrl}</div>
     </section>
-    ${c.hecho ? `<section class="card difsel"><h3>${c.dif ? "✓ Cardio completado" : "¡Hecho! ¿Cómo te ha resultado?"}</h3><div class="difs">${Object.entries(DIF).map(([k, t]) => `<button class="dif ${k} ${c.dif === k ? "on" : ""}" data-act="cDif" data-v="${k}">${t}</button>`).join("")}</div>${c.dif ? `${avisoCopia(s)}<a class="btn" href="#/hoy">Volver a Hoy</a>` : ""}</section>` : ""}
+    ${c.hecho ? `<section class="card difsel"><h3>${c.dif ? "✓ Cardio completado" : "¡Hecho! ¿Cómo te ha resultado?"}</h3><div class="difs">${Object.entries(DIF).map(([k, t]) => `<button class="dif ${k} ${c.dif === k ? "on" : ""}" data-act="cDif" data-v="${k}">${t}</button>`).join("")}</div>${c.dif ? `${avisoCopia(s)}<a class="btn" href="#/hoy">Volver a Hoy</a>` : ""}<button class="btn borrar" data-act="borrarSes" data-f="${s.fecha}">🗑 Eliminar este entreno</button></section>` : ""}
     ${consejoEnergia(s, "cardio") ? `<p class="nota energia-nota">${esc(consejoEnergia(s, "cardio"))}</p>` : ""}
     <section class="card"><p class="intro">${esc(p.intro)}</p>${p.nota ? `<p class="nota">${esc(p.nota)}</p>` : ""}<ul class="cblist">${lista}</ul>
     ${c.inicio && !c.hecho ? `<button class="mini" data-act="cFin">Terminar ya</button>` : ""}</section>`;
@@ -616,6 +616,13 @@ function tickDescanso(s, p) {
   an.style.strokeDasharray = C; an.style.strokeDashoffset = C * (1 - Math.min(1, resta / (d.total || 1)));
 }
 function destello() { document.body.classList.remove("flash"); void document.body.offsetWidth; document.body.classList.add("flash"); }
+function toastAccion(t, etiqueta, fn, ms = 5500) {
+  document.querySelectorAll(".toast").forEach((x) => x.remove());
+  const d = document.createElement("div"); d.className = "toast accion";
+  d.innerHTML = `<span>${esc(t)}</span><button>${esc(etiqueta)}</button>`;
+  d.querySelector("button").addEventListener("click", () => { d.remove(); fn(); });
+  document.body.append(d); setTimeout(() => d.remove(), ms);
+}
 function toast(t) { const d = document.createElement("div"); d.className = "toast"; d.textContent = t; document.body.append(d); setTimeout(() => d.remove(), 2600); }
 function empezarDescanso(s, seg, tipo) { const fin = Date.now() + seg * 1000; s.descanso = { fin, fin0: fin, total: seg, tipo }; ultimoAviso = -1; db.guardar(); }
 
@@ -654,6 +661,16 @@ $app.addEventListener("click", async (ev) => {
       db.borrarSesion(f); db.crearSesion(f, +el.dataset.d, info.semana); ir(`#/entreno/${f}`); return;
     }
     case "salir": mantenerPantalla(false); ir("#/hoy"); return;
+    case "borrarSes": {
+      const f = el.dataset.f, ses = db.sesion(f); if (!ses) return;
+      const p = sesionDe(ses.dia, ses.semana);
+      if (!confirm(`¿Eliminar el entreno ${p.titulo} del ${NOMBRE_DIA[db.diaISO(db.parse(f))].toLowerCase()} ${db.fechaCorta(f)} (Semana ${ses.semana})?\n\nSe borrarán sus pesos y valoraciones. El resto de tus entrenos no cambia.`)) return;
+      const copia = structuredClone(ses);
+      db.borrarSesion(f);
+      if (ruta().r === "entreno") ir("#/progreso"); else render();
+      toastAccion("Entreno eliminado", "Deshacer", () => { db.st().sesiones[f] = copia; db.guardar(); render(); toast("Entreno recuperado"); });
+      return;
+    }
     case "energia": { const { ses } = planDe(fecha); if (ses) { ses.energia = el.dataset.v; db.guardar(); render(); } return; }
   }
 
