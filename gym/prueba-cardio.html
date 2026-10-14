@@ -48,7 +48,7 @@ import { animar } from "./js/figuras.js";
 
 const DIA = { corto: { nombre: "Cardio corto", principal: 25 }, largo: { nombre: "Cardio largo", principal: 45 } };
 const CAL = { min: 2, vel: 4.0, inc: 2 }, ENF = { min: 2, vel: 3.0, inc: 0 };
-const VELS = Array.from({ length: 21 }, (_, i) => Math.round((4 + i * 0.1) * 10) / 10);
+const VELS = Array.from({ length: 31 }, (_, i) => Math.round((4 + i * 0.1) * 10) / 10);
 const INCS = Array.from({ length: 9 }, (_, i) => i);
 const f1 = (n) => n.toFixed(1).replace(".", ",");
 const mmss = (s) => { s = Math.max(0, Math.floor(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
@@ -145,7 +145,7 @@ function abrirHoja(tipoSel) {
   h.hidden = false;
 }
 function poner(tipoSel, v) {
-  if (tipoSel === "v") E.vel = Math.min(6, Math.max(4, Math.round(v * 10) / 10)); else E.inc = Math.min(8, Math.max(0, Math.round(v)));
+  if (tipoSel === "v") E.vel = Math.min(7, Math.max(4, Math.round(v * 10) / 10)); else E.inc = Math.min(8, Math.max(0, Math.round(v)));
   const tr = tramoActual();
   // Cambiar velocidad/inclinación corrige el tramo en curso; "Nuevos parámetros" es lo que abre un tramo nuevo.
   if (tr && faseAct(trans()).id === "pri" && !E.hecho) { tr.vel = E.vel; tr.inc = E.inc; }
