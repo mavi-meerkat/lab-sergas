@@ -1,7 +1,7 @@
 // Unidad de Análisis — aventura gráfica de estudio (se carga solo al entrar).
 // Primera entrega: sede central con rangos, El interrogatorio y Casos sin resolver.
 import { A } from "./ctx.js";
-import { el, boton, tarjeta, rico, barra, toast } from "./ui.js";
+import { el, boton, tarjeta, rico, barra, toast, segmentado } from "./ui.js";
 import { bloquePregunta, teclasPregunta, limpia } from "./pregunta.js";
 import { necesitaValidar } from "./content.js";
 import { azar, norm } from "./util.js";
@@ -106,7 +106,7 @@ export function vistaUnidad(main, args = {}, ctlExterno = null) {
       texto.textContent = "";
       let i = 0; const total = txt.length;
       const t = tEscritura = setInterval(() => {
-        i = Math.min(total, i + 2);
+        i = Math.min(total, i + 3);
         texto.textContent = txt.slice(0, i);
         if (i >= total) fin();
       }, 18);
@@ -154,7 +154,10 @@ export function vistaUnidad(main, args = {}, ctlExterno = null) {
     const r = rango(U.puntos);
     main.append(el("div.fila.entre.envuelve",
       el("h1", "🔎 Unidad de Análisis"),
-      el("div.fila", boton(A.p.get("unidad_voz", true) !== false ? "🔊 Voces" : "🔇 Voces", (e) => {
+      el("div.fila.envuelve", el("span.suave.peq", "Velocidad de las voces:"),
+        segmentado(["1×", "1,15×", "1,3×", "1,5×", "1,75×"], { 1: "1×", 1.15: "1,15×", 1.3: "1,3×", 1.5: "1,5×", 1.75: "1,75×" }[Number(A.p.get("unidad_vel", 1.3))] || "1,3×",
+          (v) => A.p.set("unidad_vel", { "1×": 1, "1,15×": 1.15, "1,3×": 1.3, "1,5×": 1.5, "1,75×": 1.75 }[v])),
+        boton(A.p.get("unidad_voz", true) !== false ? "🔊 Voces" : "🔇 Voces", (e) => {
         const on = A.p.get("unidad_voz", true) === false;
         A.p.set("unidad_voz", on); e.target.textContent = on ? "🔊 Voces" : "🔇 Voces"; if (!on) callar();
       }, "fantasma"))));

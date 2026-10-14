@@ -55,7 +55,7 @@ function hablarDispositivo(texto, perfil, gen) {
       const u = new SpeechSynthesisUtterance(partes[i++]);
       u.lang = "es-ES"; if (v) u.voice = v;
       u.pitch = Math.max(0.1, Math.min(2, perfil.tono || 1));
-      u.rate = (perfil.vel || 1) * Number(A.p ? A.p.get("unidad_vel", 1) : 1);
+      u.rate = (perfil.vel || 1) * Number(A.p ? A.p.get("unidad_vel", 1.3) : 1);
       u.onend = sig; u.onerror = sig;
       speechSynthesis.speak(u);
     };
@@ -84,7 +84,7 @@ export async function decir(texto, quienVoz, perfil, fija = false) {
     if (gen !== generacion) return;
     if (idx.has(k)) {
       const a = new Audio(`audio/u/${k}.ogg`);
-      a.playbackRate = Number(A.p ? A.p.get("unidad_vel", 1) : 1);
+      a.playbackRate = Number(A.p ? A.p.get("unidad_vel", 1.3) : 1);
       audioActual = a;
       await new Promise((ok) => { a.onended = ok; a.onerror = ok; a.play().catch(ok); });
       return;
