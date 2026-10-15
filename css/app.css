@@ -383,3 +383,8 @@ h3.modulo { margin: 18px 0 6px; font-size: 17px; }
 @media (max-width: 600px) { .u-retrato { width: 64px; flex-basis: 64px; } .u-texto { font-size: 15px; } .u-escena { aspect-ratio: 16 / 9; } }
 .u-escena.compacta { display: none; }
 .u-expediente.tira { margin-bottom: 0; border-radius: 6px 14px 0 0; padding: 8px 16px; box-shadow: none; } .u-exp-cuerpo { border-top-left-radius: 0; border-top-right-radius: 0; margin-top: 0; }
+.u-lab-bloque { margin: 8px 0; } .u-pocillos { display: flex; flex-wrap: wrap; gap: 6px; color: #2A2116; }
+.pocillo { width: 64px; height: auto; }
+.u-gel { overflow-x: auto; } .u-gel svg { width: 100%; max-width: 520px; height: auto; display: block; margin: 6px auto; }
+.u-lab-pregunta { margin: 12px 0 8px; } .u-lab-opciones { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 8px; }
+.u-lab-expl { margin-top: 8px; padding: 8px 12px; background: var(--panel2); border-radius: 10px; }

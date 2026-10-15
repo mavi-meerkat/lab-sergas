@@ -216,7 +216,7 @@ export function vistaUnidad(main, args = {}, ctlExterno = null) {
     const juegos = el("div.u-juegos",
       juegoBtn("🗣️", "El interrogatorio", "Cuatro sospechosos, una verdad. Preguntas de esta sede.", () => interrogatorio(k)),
       juegoBtn("🗄️", `Casos sin resolver (${nFrios})`, "Lo que se te resiste de los módulos de esta sede.", () => archivo(k), nFrios === 0),
-      juegoBtn("🧪", "El laboratorio identifica al culpable", "ADN, grupos sanguíneos y microscopía.", null, true, "Próximamente"),
+      juegoBtn("🧪", "El laboratorio identifica al culpable", "ADN, grupos sanguíneos y microscopía.", () => laboratorio(k)),
       juegoBtn("📌", "El tablero de pruebas", "Une cada prueba con su significado.", null, true, "Próximamente"),
       juegoBtn("🩻", "La mesa de autopsias", "Bioquímica, gasometría y causa de la muerte.", null, true, "Próximamente"),
       juegoBtn("🧫", "El caso de la muestra", "¿Dónde falló la preanalítica?", null, true, "Próximamente"),
@@ -440,6 +440,242 @@ export function vistaUnidad(main, args = {}, ctlExterno = null) {
     zona.append(el("div.u-expediente.tira", el("div.u-exp-cab", `CASO SIN RESOLVER · ${c.motivos.join(" · ")}`)), tarjeta("u-exp-cuerpo", b));
     ctl.teclas = (e) => teclasPregunta(b, e) || ((e.key === "Enter" || e.key === " ") && (dlg.avanzar(), true));
     await dlg.hablar("carmen", "neutro", "Este expediente sigue abierto. Léelo con calma y dime qué ves.", { fija: true, escena: esc });
+  }
+
+  // ================================================================ EL LABORATORIO IDENTIFICA AL CULPABLE
+  // Tres análisis con ciencia real del temario: grupo ABO/Rh (M8·U6), huella genética por STR (M3·U7, M2·U4)
+  // y microscopía con Gram (M7·U2, M7·U5). Después, dos preguntas del banco de esas unidades («el tribunal»).
+  const LAB_UNIDADES = { abo: ["M8_U6"], adn: ["M3_U7", "M3_U5", "M2_U4"], micro: ["M7_U2", "M7_U5"] };
+  const LAB_TIPOS = { miami: [["adn", 2], ["abo", 1], ["micro", 1]], vegas: [["adn", 3], ["abo", 1]], nuevayork: [["abo", 1], ["micro", 1]] };
+  const elegirPeso = (pares) => azar.choice(pares.map((p) => p[0]), pares.map((p) => p[1]));
+
+  function preguntasDe(unidades, n) {
+    const hechas = A.p.leccionesCompletadas(), vistas = A.p.vistas();
+    const base = Object.keys(A.c.preguntas).filter((id) => unidades.includes(A.c.preguntas[id].unidad) && jugable(id));
+    const est = base.filter((id) => hechas.has(A.c.preguntas[id].unidad) || vistas.has(id));
+    return azar.shuffle(est.length >= n ? est : base).slice(0, n);
+  }
+  function sospechososUnicos(n) {
+    const usados = new Set(), out = [];
+    while (out.length < n) {
+      const s = sospechoso(Math.floor(azar() * 1e9));
+      if (!usados.has(s.nombre)) { usados.add(s.nombre); out.push(s); }
+    }
+    return out;
+  }
+
+  // ---------------------------------------------------------------- dibujos de los análisis
+  const GRUPOS = ["A", "B", "AB", "O"];
+  const nombreGrupo = (g, rh) => `${g} ${rh ? "Rh+" : "Rh−"}`;
+  function pocillo(aglutina, etiqueta) {
+    const grumos = [[22, 22, 7], [36, 20, 5], [30, 33, 8], [18, 37, 4.5], [41, 34, 5.5], [27, 46, 4], [40, 45, 3.5], [16, 27, 3]];
+    const dentro = aglutina ? grumos.map(([x, y, r]) => `<circle cx="${x}" cy="${y - 2}" r="${r}" fill="#8E1B24"/>`).join("") : "";
+    return `<svg viewBox="0 0 60 78" class="pocillo"><circle cx="30" cy="30" r="24" fill="${aglutina ? "#F7E3E3" : "#D9686E"}" stroke="#555" stroke-width="2"/>${dentro}
+      <text x="30" y="72" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">${etiqueta}</text></svg>`;
+  }
+  function gel(carriles, nombres) {
+    // carriles: listas de posiciones (0 = arriba, 1 = abajo). Arriba el cátodo (−): el ADN, negativo, baja hacia el ánodo (+).
+    const W = 70 * carriles.length + 90, H = 300, y0 = 44, alto = 220;
+    let s = `<svg viewBox="0 0 ${W} ${H}" class="gel"><rect x="0" y="0" width="${W}" height="${H}" rx="10" fill="#141C2B"/>
+      <text x="8" y="${y0 - 4}" font-size="12" fill="#9FB4D9" font-weight="700">− cátodo</text><text x="10" y="${H - 8}" font-size="13" fill="#FFB0B0" font-weight="700">+ ánodo</text>`;
+    carriles.forEach((bandas, i) => {
+      const x = 80 + i * 70;
+      s += `<rect x="${x}" y="${y0 - 10}" width="46" height="8" fill="#0A0F18" stroke="#3A4A66"/>`;
+      s += `<text x="${x + 23}" y="${y0 - 16}" text-anchor="middle" font-size="12" fill="#DDE6F5" font-weight="700">${nombres[i]}</text>`;
+      for (const p of bandas) s += `<rect x="${x + 3}" y="${(y0 + p * alto).toFixed(1)}" width="40" height="5" rx="2" fill="${i === 0 ? "#8FD3FF" : "#FF9DF0"}" opacity=".95"/>`;
+    });
+    return s + "</svg>";
+  }
+
+  async function laboratorio(k) {
+    callar();
+    const s = SEDES[k];
+    const tipo = elegirPeso(LAB_TIPOS[k]);
+    const caso = numeroCaso();
+    let puntos = 0, aciertosCaso = 0;
+    main.replaceChildren();
+    const esc = escena(ESCENAS.laboratorio(s.tinte), [["iker", "neutro"], ["anna", "neutro"]]);
+    const dlg = dialogo();
+    const zona = el("div.u-zona");
+    const lbl = el("span.suave.peq");
+    main.append(el("div.fila.entre", el("div.fila", boton("← Sede", () => sede(k), "fantasma"), el("h2", `🧪 Caso #${caso}`)), lbl), esc, dlg, zona);
+    teclasDialogo(dlg);
+    await decirGuion(dlg, "lab_intro_" + tipo, esc);
+    if (!vivo) return;
+    esc.classList.add("compacta");
+    const sos = sospechososUnicos(4);
+    const culpable = Math.floor(azar() * 4);
+    const analisis = { abo: analisisABO, adn: analisisADN, micro: analisisMicro }[tipo];
+    lbl.textContent = "1 · Análisis";
+    const r = await analisis(sos, culpable, dlg, zona);
+    if (!vivo) return;
+    if (r.interpretacion) { puntos += 10; aciertosCaso++; }
+    if (r.acusacion) { puntos += 20; aciertosCaso++; }
+    // el tribunal: dos preguntas del banco de las unidades del análisis
+    lbl.textContent = "2 · El tribunal";
+    zona.replaceChildren();
+    await decirGuion(dlg, "lab_tribunal", esc);
+    for (const qid of preguntasDe(LAB_UNIDADES[tipo], 2)) {
+      if (!vivo) return;
+      const ok = await new Promise((res) => {
+        zona.replaceChildren();
+        const b = bloquePregunta(qid, { contexto: "unidad", onFin: (bien) => res(bien) });
+        ctl.teclas = (e) => teclasPregunta(b, e);
+        zona.append(el("div.u-expediente.tira", el("div.u-exp-cab", "PREGUNTA DEL TRIBUNAL")), tarjeta("u-exp-cuerpo", b));
+        b.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+      if (ok) { puntos += PUNTOS.acierto; aciertosCaso++; }
+    }
+    if (!vivo) return;
+    teclasDialogo(dlg);
+    zona.replaceChildren();
+    esc.classList.remove("compacta");
+    U = estado(); U.casos += 1; if (r.acusacion) U.resueltas += 1; guardar(U);
+    esc.ponerActores([["duarte", "serio"], ["anna", r.acusacion ? "sonrie" : "duda"]]);
+    await decirGuion(dlg, r.acusacion ? "cierre" : "cierre_flojo", esc);
+    await sumar(puntos, dlg);
+    lbl.textContent = "Caso terminado";
+    zona.append(tarjeta(r.acusacion ? "bg-ok_bg" : "",
+      el("h2", r.acusacion ? "📁 Caso cerrado" : "📂 El culpable sigue suelto"),
+      el("p", `${aciertosCaso} de 4 aciertos · +${puntos} puntos · rango: ${rango(estado().puntos).nombre}`),
+      el("div.fila.envuelve", boton("Otro caso", () => laboratorio(k), "primario"), boton("Volver a la sede", () => sede(k), "secundario"))));
+  }
+
+  /** Fase de interpretación con botones; devuelve true si acierta. */
+  function interpretar(zona, dlg, titulo, opciones, correcta, explicacion) {
+    return new Promise(async (res) => {
+      const caja = el("div.u-lab-pregunta", el("b", titulo));
+      const fila = el("div.u-lab-opciones");
+      let hecho = false;
+      opciones.forEach((o, i) => {
+        const b = el("button.opcion", { type: "button" }, o);
+        b.onclick = async () => {
+          if (hecho) return; hecho = true;
+          const ok = o === correcta;
+          [...fila.children].forEach((x) => { x.disabled = true; if (x.textContent === correcta) x.classList.add("bien"); else if (x === b) x.classList.add("mal"); });
+          await decirGuion(dlg, ok ? "lab_bien" : "lab_mal");
+          caja.append(rico((ok ? "✔ " : "✘ ") + explicacion, "peq u-lab-expl"));
+          res(ok);
+        };
+        fila.append(b);
+      });
+      caja.append(fila);
+      zona.append(caja);
+      ctl.teclas = (e) => {
+        if (/^[1-9]$/.test(e.key) && fila.children[Number(e.key) - 1]) { fila.children[Number(e.key) - 1].click(); return true; }
+        if (e.key === "Enter" || e.key === " ") { dlg.avanzar(); return true; }
+        return false;
+      };
+      await decirGuion(dlg, "lab_analiza");
+    });
+  }
+  /** Fase de acusación: tarjetas de sospechosos con su dato; devuelve true si acierta. */
+  function acusar(zona, dlg, sos, datos, culpable) {
+    return new Promise(async (res) => {
+      const rej = el("div.u-sospechosos");
+      let hecho = false;
+      sos.forEach((s, i) => {
+        const t = el("button.u-sospechoso", { type: "button" },
+          el("div.u-sos-foto", { html: busto(s, "neutro") }),
+          el("div.u-sos-nombre", el("b", `${i + 1}. ${s.nombre}`), el("span.peq.suave", s.oficio)),
+          el("div.u-sos-dice", datos[i]));
+        t.onclick = async () => {
+          if (hecho) return; hecho = true;
+          const ok = i === culpable;
+          [...rej.children].forEach((x, j) => { x.disabled = true; if (j === culpable) x.classList.add("miente"); else if (j === i) x.classList.add("error"); else x.classList.add("apagado"); });
+          t.querySelector(".u-sos-foto").innerHTML = busto(s, ok ? "serio" : "sorpresa");
+          await decirGuion(dlg, ok ? "acusado_culpable" : "acusado_inocente", null, s);
+          if (vivo) await decirGuion(dlg, ok ? "acierto" : "fallo");
+          res(ok);
+        };
+        rej.append(t);
+      });
+      zona.append(el("div.u-lab-pregunta", el("b", "¿Con quién coincide?")), rej);
+      ctl.teclas = (e) => {
+        if (/^[1-4]$/.test(e.key)) { rej.children[Number(e.key) - 1].click(); return true; }
+        if (e.key === "Enter" || e.key === " ") { dlg.avanzar(); return true; }
+        return false;
+      };
+      rej.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      await decirGuion(dlg, "lab_acusa");
+    });
+  }
+
+  // ---------------------------------------------------------------- 1. grupo ABO y Rh
+  async function analisisABO(sos, culpable, dlg, zona) {
+    // grupos distintos para que solo uno coincida
+    const todos = azar.shuffle(GRUPOS.flatMap((g) => [[g, true], [g, false]])).slice(0, 4);
+    const [g, rh] = todos[culpable];
+    const tieneA = g === "A" || g === "AB", tieneB = g === "B" || g === "AB";
+    zona.replaceChildren(el("div.u-expediente",
+      el("div.u-exp-cab", "INFORME DEL LABORATORIO · MANCHA DE SANGRE DE LA ESCENA"),
+      el("div.u-lab-bloque", el("b.peq", "Prueba directa o celular (hematíes de la muestra + antisueros)"),
+        el("div.u-pocillos", { html: pocillo(tieneA, "anti-A") + pocillo(tieneB, "anti-B") + pocillo(tieneA || tieneB, "anti-AB") + pocillo(rh, "anti-D") + pocillo(false, "control") })),
+      el("div.u-lab-bloque", el("b.peq", "Prueba inversa o sérica (suero de la muestra + hematíes conocidos)"),
+        el("div.u-pocillos", { html: pocillo(!tieneA, "hem. A1") + pocillo(!tieneB, "hem. B") })),
+      el("p.peq", "Grumos rojos = aglutina (positivo). Rosa homogéneo = no aglutina (negativo).")));
+    const correcta = nombreGrupo(g, rh);
+    const opciones = GRUPOS.flatMap((x) => [nombreGrupo(x, true), nombreGrupo(x, false)]);
+    const anti = [tieneA ? "" : "anti-A", tieneB ? "" : "anti-B"].filter(Boolean);
+    const expl = `Aglutina con ${[tieneA && "anti-A", tieneB && "anti-B"].filter(Boolean).join(" y ") || "ningún antisuero ABO"} → ${g === "O" ? "sin antígenos A ni B (grupo O)" : "antígeno " + (g === "AB" ? "A y B (grupo AB)" : g + " (grupo " + g + ")")}. ` +
+      `La inversa lo confirma: el suero tiene ${anti.length ? anti.join(" y ") : "ningún anticuerpo ABO (grupo AB)"} y por eso aglutina ${anti.length ? anti.map((a) => "hematíes " + (a === "anti-A" ? "A1" : "B")).join(" y ") : "nada"}. ` +
+      `Directa e inversa deben cuadrar: son su propio control. Anti-D ${rh ? "positivo → Rh+" : "negativo → Rh−"}, con el control negativo.`;
+    const interpretacion = await interpretar(zona, dlg, "¿De qué grupo es la sangre de la escena?", opciones, correcta, expl);
+    if (!vivo) return {};
+    const acusacion = await acusar(zona, dlg, sos, todos.map(([gg, rr]) => `Grupo ${nombreGrupo(gg, rr)}`), culpable);
+    return { interpretacion, acusacion };
+  }
+
+  // ---------------------------------------------------------------- 2. huella genética (STR)
+  const DATOS_GEL = [
+    ["¿Hacia qué polo migra el ADN en la electroforesis?", ["Hacia el ánodo (+)", "Hacia el cátodo (−)", "No migra: está en su punto isoeléctrico", "Depende del colorante"], "Hacia el ánodo (+)",
+      "El ADN tiene **carga negativa** (los fosfatos), así que se aplica cerca del **cátodo** y migra hacia el **ánodo (+)**."],
+    ["En el gel, ¿qué fragmentos llegan más lejos del pocillo?", ["Los más pequeños", "Los más grandes", "Todos llegan igual", "Los que tienen más guanina"], "Los más pequeños",
+      "En un soporte **restrictivo** (agarosa, poliacrilamida) se separan por **carga y tamaño**: los **pequeños** avanzan más; los grandes van más lentos."],
+    ["En una huella genética por STR, ¿qué es un alelo?", ["El número de repeticiones del microsatélite", "Una mutación puntual (SNP)", "Una secuencia Alu", "Un gen del grupo sanguíneo"], "El número de repeticiones del microsatélite",
+      "Los **STR** (microsatélites) son polimorfismos de **longitud**: el alelo se nombra por el **número de repeticiones** (p. ej. TH01-7). Se estudian **por PCR**."],
+    ["¿Para qué sirve el primer carril, el marcador?", ["Para conocer el tamaño de las bandas", "Para teñir el gel", "Es el control negativo", "Para medir la concentración de sal"], "Para conocer el tamaño de las bandas",
+      "El **marcador de peso molecular** lleva fragmentos de tamaño conocido: comparando con él se estima el tamaño de cada banda."],
+  ];
+  async function analisisADN(sos, culpable, dlg, zona) {
+    const perfil = () => [0, 1, 2].flatMap((locus) => {
+      const base = 0.1 + locus * 0.3;
+      const a = Math.floor(azar() * 6), b = Math.floor(azar() * 6);
+      return [...new Set([a, b])].map((x) => base + x * 0.04);
+    });
+    const perfiles = [];
+    while (perfiles.length < 4) {
+      const p = perfil(), firma = p.map((x) => x.toFixed(2)).sort().join();
+      if (!perfiles.some((q) => q.firma === firma)) perfiles.push(Object.assign(p, { firma }));
+    }
+    const marcador = [0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95];
+    const carriles = [marcador, perfiles[culpable], ...perfiles];
+    const nombres = ["M", "Escena", "S1", "S2", "S3", "S4"];
+    zona.replaceChildren(el("div.u-expediente",
+      el("div.u-exp-cab", "INFORME DEL LABORATORIO · HUELLA GENÉTICA (3 STR, PCR + ELECTROFORESIS)"),
+      el("div.u-gel", { html: gel(carriles, nombres) }),
+      el("p.peq", "M = marcador de tamaño. Escena = sangre del arma. S1-S4 = sospechosos, en el orden de abajo.")));
+    const [tit, ops, ok, expl] = elegirUna(DATOS_GEL);
+    const interpretacion = await interpretar(zona, dlg, tit, azar.shuffle([...ops]), ok, expl);
+    if (!vivo) return {};
+    const acusacion = await acusar(zona, dlg, sos, sos.map((_, i) => `Carril S${i + 1}`), culpable);
+    return { interpretacion, acusacion };
+  }
+
+  // ---------------------------------------------------------------- 3. microscopía (Gram)
+  async function analisisMicro(sos, culpable, dlg, zona) {
+    const { MAZOS } = await import("./imagenes.js");
+    const mazo = MAZOS.find((m) => m.id === "gram");
+    const cartas = azar.shuffle([...mazo.tarjetas]).slice(0, 4);
+    const buena = cartas[culpable];
+    zona.replaceChildren(el("div.u-expediente",
+      el("div.u-exp-cab", "INFORME DEL LABORATORIO · TINCIÓN DE GRAM DE LA MUESTRA DEL ARMA"),
+      el("div.img-grande", { html: buena.img() }),
+      el("p.peq", "Violeta = grampositivo (retiene el cristal violeta). Rojo = gramnegativo (se decolora y toma la safranina).")));
+    const interpretacion = await interpretar(zona, dlg, "¿Qué se ve al microscopio?", cartas.map((c) => c.n), buena.n, buena.d);
+    if (!vivo) return {};
+    const acusacion = await acusar(zona, dlg, sos, cartas.map((c) => `Su laboratorio cultiva: ${c.n.split(" · ")[1] || c.n}`), culpable);
+    return { interpretacion, acusacion };
   }
 
   // ---------------------------------------------------------------- arranque

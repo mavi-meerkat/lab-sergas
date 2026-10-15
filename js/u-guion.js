@@ -103,6 +103,41 @@ export const GUION = {
     ["carmen", "neutro", "Todavía no. Lo dejamos en el archivo y lo intentamos otro día."],
     ["carmen", "duda", "Este se resiste. Léete bien la explicación, cariño."],
   ],
+  lab_intro_adn: [
+    ["duarte", "neutro", "Tenemos sangre en la escena y cuatro sospechosos. El ADN decidirá."],
+    ["iker", "sonrie", "¡Gel listo! Cinco carriles, un marcador y un culpable. Me encanta mi trabajo."],
+    ["duarte", "serio", "Los testigos olvidan. Los microsatélites, no."],
+  ],
+  lab_intro_abo: [
+    ["duarte", "neutro", "Una mancha de sangre en el suelo. Antes del ADN, empecemos por el grupo."],
+    ["iker", "sonrie", "Prueba directa, prueba inversa y Rh. Si cuadran, tenemos grupo. Si no cuadran, tenemos un problema."],
+    ["carmen", "neutro", "La sangre de la escena no es de la víctima, cariño. Averigüemos de quién es."],
+  ],
+  lab_intro_micro: [
+    ["valeria", "neutro", "He teñido la muestra del arma con Gram. Lo que vemos al microscopio nos dirá de dónde viene."],
+    ["iker", "neutro", "Cuatro sospechosos, cuatro laboratorios y cuatro cultivos distintos. Solo uno coincide con el arma."],
+    ["duarte", "neutro", "Las bacterias no mienten. Ni siquiera las de Nueva York."],
+  ],
+  lab_analiza: [
+    ["iker", "neutro", "Primero lo primero: interpreta el resultado."],
+    ["valeria", "neutro", "Antes de acusar a nadie, quiero oír tu interpretación técnica."],
+  ],
+  lab_bien: [
+    ["valeria", "sonrie", "Interpretación correcta. Ahora compárala con los sospechosos."],
+    ["iker", "sonrie", "¡Exacto! Ya solo falta ver con quién coincide."],
+  ],
+  lab_mal: [
+    ["valeria", "neutro", "No es correcto. Te explico por qué, y luego comparamos."],
+    ["iker", "duda", "Uy, casi. Mira bien el resultado otra vez."],
+  ],
+  lab_acusa: [
+    ["duarte", "serio", "Ya tienes el resultado. ¿Con quién coincide?"],
+    ["marco", "neutro", "Los cuatro esperan en la sala. Dime a cuál detengo."],
+  ],
+  lab_tribunal: [
+    ["valeria", "neutro", "El juez querrá saber si dominas la técnica. Dos preguntas más."],
+    ["duarte", "neutro", "Un buen caso se gana en el laboratorio… y se defiende en el juicio. Responde."],
+  ],
   charla: [
     ["duarte", "neutro", "No me mires así. Las gafas de sol son parte del protocolo."],
     ["valeria", "neutro", "He contado los pasos hasta la máquina de café. Ciento doce. Es ineficiente."],
