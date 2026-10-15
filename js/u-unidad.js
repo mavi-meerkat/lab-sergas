@@ -218,7 +218,7 @@ export function vistaUnidad(main, args = {}, ctlExterno = null) {
       juegoBtn("🗄️", `Casos sin resolver (${nFrios})`, "Lo que se te resiste de los módulos de esta sede.", () => archivo(k), nFrios === 0),
       juegoBtn("🧪", "El laboratorio identifica al culpable", "ADN, grupos sanguíneos y microscopía.", () => laboratorio(k)),
       juegoBtn("📌", "El tablero de pruebas", "Une cada prueba con su significado.", () => tablero(k)),
-      juegoBtn("🩻", "La mesa de autopsias", "Bioquímica, gasometría y causa de la muerte.", null, true, "Próximamente"),
+      juegoBtn("🩻", "La mesa de autopsias", "Protocolo, gasometría, bilirrubina y electrolitos.", () => mesa(k)),
       juegoBtn("🧫", "El caso de la muestra", "¿Dónde falló la preanalítica?", null, true, "Próximamente"),
       juegoBtn("🔗", "Cadena de custodia", "Encuentra el eslabón roto.", null, true, "Próximamente"));
     main.append(juegos);
@@ -817,6 +817,171 @@ export function vistaUnidad(main, args = {}, ctlExterno = null) {
           boton("Ver la lección", () => { quitar(); A.abrirLeccion(datos.lid, 0); }, "secundario"),
           boton("Volver a la sede", () => { quitar(); sede(k); }, "fantasma"))));
     }
+  }
+
+  // ================================================================ LA MESA DE AUTOPSIAS
+  // Protocolo de autopsia (M1·U5) + interpretación de la analítica previa a la muerte (M5·U7 gasometría y
+  // electrolitos, M5·U3 bilirrubina). Valores generados con las reglas y rangos de las lecciones.
+  const coma = (x, d = 1) => x.toFixed(d).replace(".", ",");
+  const entre = (a, b) => a + azar() * (b - a);
+  const PROTOCOLO = [
+    ["¿Qué ley regula las autopsias clínicas?", ["Ley 29/1980", "Ley 41/2002", "Ley 14/1986", "Real Decreto 664/1997"], "Ley 29/1980",
+      "La **Ley 29/1980** regula la autopsia clínica: cuando el estudio clínico no basta, hay interés científico o se sospechan lesiones de interés social, familiar o científico."],
+    ["En plena autopsia clínica sospechas que la muerte no fue natural. ¿Qué haces?", ["Suspenderla y avisar al juzgado de guardia", "Terminarla y avisar a la familia", "Seguir y anotarlo en el informe", "Pedir una ecopsia"], "Suspenderla y avisar al juzgado de guardia",
+      "Si se sospecha muerte **no natural**, la autopsia clínica se **suspende** y se avisa al **juzgado de guardia**."],
+    ["¿En qué orden se abre en la autopsia?", ["Cráneo → tórax → abdomen", "Abdomen → tórax → cráneo", "Tórax → abdomen → cráneo", "Da igual el orden"], "Cráneo → tórax → abdomen",
+      "El orden es **cráneo → tórax → abdomen**, con **al menos dos muestras** de cada órgano."],
+    ["¿Qué necesita una autopsia clínica antes de empezar?", ["La autorización de la familia", "Una orden judicial", "El permiso del director del hospital", "Nada, es automática"], "La autorización de la familia",
+      "La autopsia **clínica** necesita la **autorización de la familia** (la judicial es otra cosa)."],
+    ["¿Qué es una ecopsia?", ["Tomar muestras por punción guiada por ecografía sin abrir el cadáver", "Una autopsia completa grabada en vídeo", "Un estudio de ADN del cadáver", "Una autopsia solo del cráneo"], "Tomar muestras por punción guiada por ecografía sin abrir el cadáver",
+      "La **ecopsia** toma muestras con **punciones guiadas por ecografía** sin abrir el cadáver (hepatitis C, sida, priones): 5 punciones por órgano sano, 7 o más si hay lesión."],
+    ["¿Cómo se fija una biopsia pequeña?", ["En formol al 10 %, con al menos 20 veces más formol que tejido", "En suero fisiológico a 4 °C", "En alcohol al 96 % con la tapa llena de tejido", "En seco, para no diluirla"], "En formol al 10 %, con al menos 20 veces más formol que tejido",
+      "Fijación inmediata en **formol al 10 %**, proporción tejido/formol **al menos 1/20**. Las muestras **no deben secarse**."],
+    ["¿Cuántas muestras se toman como mínimo de cada órgano en la autopsia?", ["Dos", "Una", "Cinco", "Ninguna si el órgano parece sano"], "Dos",
+      "Se toman **al menos dos muestras de cada órgano**."],
+  ];
+  const GASO = {
+    "Acidosis metabólica": { ph: [7.18, 7.30], pco2: [26, 33], hco3: [11, 17], comp: "Pulmón: hiperventila → ↓ pCO₂", causas: ["Insuficiencia renal", "Cetoacidosis", "Acidosis láctica", "Diarrea"] },
+    "Alcalosis metabólica": { ph: [7.48, 7.56], pco2: [46, 53], hco3: [31, 38], comp: "Pulmón: hipoventila → ↑ pCO₂", causas: ["Vómitos", "Diuréticos", "Hiperaldosteronismo"] },
+    "Acidosis respiratoria": { ph: [7.20, 7.31], pco2: [56, 72], hco3: [26, 29], comp: "Riñón: retiene HCO₃⁻", causas: ["Sobredosis de opiáceos", "EPOC", "Neumonía", "Guillain-Barré"] },
+    "Alcalosis respiratoria": { ph: [7.48, 7.57], pco2: [24, 31], hco3: [19, 22], comp: "Riñón: elimina HCO₃⁻", causas: ["Hiperventilación por ansiedad", "Grandes alturas", "Embarazo", "Dolor"] },
+  };
+  function informe(titulo, filas, notas = []) {
+    return el("div.u-expediente",
+      el("div.u-exp-cab", titulo),
+      el("table.u-analitica", el("thead", el("tr", el("th", "Prueba"), el("th", "Resultado"), el("th", "Referencia"))),
+        el("tbody", filas.map(([p, r, ref, alto]) => el("tr" + (alto ? ".fuera" : ""), el("td", p), el("td", el("b", r)), el("td.suave", ref))))),
+      ...notas.map((n) => el("p.peq", n)));
+  }
+
+  async function mesa(k) {
+    callar();
+    const caso = numeroCaso();
+    let puntos = 0, aciertosCaso = 0, pasos = 0;
+    main.replaceChildren();
+    const esc = escena(ESCENAS.morgue(), [["carmen", "neutro"], ["anna", "serio"]]);
+    const dlg = dialogo();
+    const zona = el("div.u-zona");
+    const lbl = el("span.suave.peq");
+    main.append(el("div.fila.entre", el("div.fila", boton("← Sede", () => sede(k), "fantasma"), el("h2", `🩻 Caso #${caso}`)), lbl), esc, dlg, zona);
+    teclasDialogo(dlg);
+    await decirGuion(dlg, "autopsia_intro", esc);
+    if (!vivo) return;
+    esc.classList.add("compacta");
+    const paso = async (titulo, ops, ok, expl, mezclar = true) => {
+      pasos++;
+      const bien = await interpretar(zona, dlg, titulo, mezclar ? azar.shuffle([...ops]) : ops, ok, expl);
+      if (bien) { puntos += 10; aciertosCaso++; }
+      return bien;
+    };
+    // 1. protocolo
+    lbl.textContent = "1 · Protocolo";
+    const [pt, po, pk, pe] = elegirUna(PROTOCOLO);
+    zona.replaceChildren(el("div.u-expediente", el("div.u-exp-cab", `CASO #${caso} · SALA DE AUTOPSIAS`), el("p", "Antes de tocar nada, Carmen quiere comprobar que conoces el protocolo.")));
+    await paso(pt, po, pk, pe);
+    if (!vivo) return;
+    // 2. analítica
+    lbl.textContent = "2 · Analítica";
+    zona.replaceChildren();
+    await decirGuion(dlg, "autopsia_analitica");
+    const tipo = elegirPeso([["gaso", 2], ["bili", 1], ["potasio", 1]]);
+    let unidades = ["M5_U7"], resumen = "";
+    if (tipo === "gaso") {
+      const tr = elegirUna(Object.keys(GASO)), d = GASO[tr];
+      const ph = entre(...d.ph), pco2 = entre(...d.pco2), hco3 = entre(...d.hco3);
+      zona.append(informe("GASOMETRÍA ARTERIAL AL INGRESO", [
+        ["pH", coma(ph, 2), "7,35-7,45", ph < 7.35 || ph > 7.45],
+        ["pCO₂", coma(pco2, 0) + " mmHg", "35-45 mmHg", pco2 < 35 || pco2 > 45],
+        ["HCO₃⁻", coma(hco3, 0) + " mEq/L", "22-26 mEq/L", hco3 < 22 || hco3 > 26],
+      ], ["Clasifícala en 3 pasos: mira el pH, busca qué lo explica y comprueba la compensación."]));
+      await paso("1) ¿Qué trastorno tiene?", Object.keys(GASO), tr,
+        `pH ${coma(ph, 2)} → ${ph < 7.35 ? "acidosis" : "alcalosis"}. Lo explica ${tr.includes("respiratoria") ? `la pCO₂ (${coma(pco2, 0)} mmHg)` : `el HCO₃⁻ (${coma(hco3, 0)} mEq/L)`} → **${tr.toLowerCase()}**.`, false);
+      if (!vivo) return;
+      await paso("2) ¿Cómo está compensando?", Object.values(GASO).map((x) => x.comp), d.comp,
+        `En la ${tr.toLowerCase()} compensa así: **${d.comp}**. ${tr.includes("respiratoria") ? `Por eso el HCO₃⁻ está en ${coma(hco3, 0)}.` : `Por eso la pCO₂ está en ${coma(pco2, 0)}.`}`);
+      if (!vivo) return;
+      const causa = elegirUna(d.causas);
+      const otras = Object.entries(GASO).filter(([t]) => t !== tr).map(([, x]) => elegirUna(x.causas));
+      await paso("3) ¿Qué causa encaja con esta gasometría?", [causa, ...otras], causa,
+        `Causas de ${tr.toLowerCase()} según el libro: ${d.causas.join(", ").toLowerCase()}.`);
+      resumen = `${tr} por ${causa.toLowerCase()}`;
+    } else if (tipo === "bili") {
+      unidades = ["M5_U3"];
+      const pre = azar() < 0.5;
+      const r1 = (x) => Math.round(x * 10) / 10;
+      const total = r1(pre ? entre(3.5, 9) : entre(4, 12));
+      const directa = r1(pre ? entre(0.2, 0.6) : total * entre(0.6, 0.8));
+      const indirecta = r1(total - directa);
+      zona.append(informe("BIOQUÍMICA · BILIRRUBINA (JENDRASSIK-GROF)", [
+        ["Bilirrubina total", coma(total) + " mg/dL", "", true],
+        ["Bilirrubina directa", coma(directa) + " mg/dL", "", !pre],
+        ["Bilirrubina indirecta", "¿?", "", false],
+      ], ["La directa reacciona sola con el ácido sulfanílico diazotado; la total, con cafeína. Escleróticas amarillas a la inspección."]));
+      const opsI = [coma(indirecta), coma(total + directa), coma(directa), coma(Math.abs(total - 2 * directa))];
+      await paso("1) ¿Cuánto vale la bilirrubina indirecta (mg/dL)?", [...new Set(opsI)], coma(indirecta),
+        `**Indirecta = total − directa** = ${coma(total)} − ${coma(directa)} = **${coma(indirecta)} mg/dL**.`);
+      if (!vivo) return;
+      const tipos = ["No conjugada (indirecta, prehepática)", "Conjugada (directa)"];
+      await paso("2) ¿Qué hiperbilirrubinemia predomina?", tipos, tipos[pre ? 0 : 1],
+        pre ? "Casi toda es **indirecta** (no conjugada): el problema está antes de la conjugación hepática." : "Predomina la **directa** (conjugada): ya se conjugó en el hígado, pero no sale bien por la bilis.", false);
+      if (!vivo) return;
+      const causasPre = ["Hemólisis", "Síndrome de Gilbert", "Crigler-Najjar"], causasCon = ["Dubin-Johnson", "Colestasis extrahepática por litiasis", "Hepatitis (colestasis intrahepática)"];
+      const causa = elegirUna(pre ? causasPre : causasCon);
+      await paso("3) ¿Qué causa del libro encaja?", [causa, ...azar.shuffle(pre ? causasCon : causasPre).slice(0, 2), "Vómitos"], causa,
+        `Causas de la ${pre ? "no conjugada: hemólisis, Gilbert, Crigler-Najjar e ictericia neonatal" : "conjugada: Rotor, Dubin-Johnson y colestasis intra o extrahepática"}. La ictericia se ve a partir de 2-3 mg/dL.`);
+      resumen = `ictericia por hiperbilirrubinemia ${pre ? "no conjugada" : "conjugada"} (${causa.toLowerCase()})`;
+    } else {
+      const kv = entre(6.3, 7.4), artefacto = azar() < 0.5;
+      zona.append(informe("BIOQUÍMICA · ELECTROLITOS", [
+        ["Sodio", coma(entre(136, 146), 0) + " mEq/L", "135-148 mEq/L", false],
+        ["Potasio", coma(kv) + " mEq/L", "3,5-5 mEq/L", true],
+        ["Cloro", coma(entre(97, 104), 0) + " mEq/L", "95-105 mEq/L", false],
+      ], [artefacto ? "Observaciones del laboratorio: suero de aspecto rojizo (hemolizado). Extracción difícil, torniquete más de 3 minutos."
+        : "Observaciones del laboratorio: suero sin hemólisis, tubo correcto, extracción sin incidencias. ECG al ingreso con bradicardia."]));
+      await paso("1) ¿Cómo está el potasio?", ["Hiperpotasemia (> 5,5 mEq/L)", "Normal (3,5-5 mEq/L)", "Hipopotasemia (< 3,5 mEq/L)"], "Hiperpotasemia (> 5,5 mEq/L)",
+        `Potasio ${coma(kv)} mEq/L: **hiperpotasemia** (normal 3,5-5; hiper por encima de 5,5).`, false);
+      if (!vivo) return;
+      await paso("2) ¿Es real o un error del laboratorio?", ["Falso aumento (artefacto)", "Hiperpotasemia real"], artefacto ? "Falso aumento (artefacto)" : "Hiperpotasemia real",
+        artefacto ? "Suero **hemolizado** y torniquete prolongado: al romperse los hematíes sale potasio. Es un **falso aumento**; hay que repetir la extracción." : "Sin hemólisis ni errores preanalíticos y con bradicardia en el ECG: la hiperpotasemia es **real**.", false);
+      if (!vivo) return;
+      if (artefacto) await paso("3) ¿Qué otro error de laboratorio fabrica una falsa hiperpotasemia?", ["Recoger la sangre en tubo con EDTA-K", "Etiquetar el tubo antes de la extracción", "Extraer en ayunas", "Dejar secar el alcohol antes de pinchar"], "Recoger la sangre en tubo con EDTA-K",
+        "Los errores que la fabrican, según el libro: **torniquete prolongado, hemólisis y tubo con EDTA-K**.");
+      else await paso("3) ¿Qué produce una hiperpotasemia grave?", ["Bradicardia, fibrilación y fallo cardiaco", "Tetania", "Edema cerebral", "Alcalosis metabólica"], "Bradicardia, fibrilación y fallo cardiaco",
+        "La hiperpotasemia (> 5,5) da **bradicardia, fibrilación y debilidad muscular**; grave, puede matar por **fallo cardiaco**. La tetania es de la hipocalcemia y el edema cerebral, de la hiponatremia grave.");
+      resumen = artefacto ? "potasio falsamente elevado por hemólisis: la causa de la muerte hay que buscarla en otra parte" : "hiperpotasemia real con fallo cardiaco";
+      unidades = ["M5_U7", "M1_U4"];
+    }
+    if (!vivo) return;
+    await dlg.hablar("carmen", aciertosCaso >= pasos - 1 ? "sonrie" : "neutro", `Conclusión del informe: ${resumen}.`);
+    // tribunal
+    lbl.textContent = "3 · El tribunal";
+    const qs = preguntasDe([...unidades, "M1_U5"], 1);
+    if (qs.length && vivo) {
+      await decirGuion(dlg, "lab_tribunal");
+      const ok = await new Promise((res) => {
+        zona.replaceChildren();
+        const b = bloquePregunta(qs[0], { contexto: "unidad", onFin: (bien) => res(bien) });
+        ctl.teclas = (e) => teclasPregunta(b, e);
+        zona.append(el("div.u-expediente.tira", el("div.u-exp-cab", "PREGUNTA DEL TRIBUNAL")), tarjeta("u-exp-cuerpo", b));
+        b.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+      pasos++;
+      if (ok) { puntos += PUNTOS.acierto; aciertosCaso++; }
+    }
+    if (!vivo) return;
+    teclasDialogo(dlg);
+    zona.replaceChildren();
+    esc.classList.remove("compacta");
+    U = estado(); U.casos += 1; guardar(U);
+    const bien = aciertosCaso >= pasos - 1;
+    esc.ponerActores([["carmen", bien ? "sonrie" : "neutro"], ["anna", bien ? "sonrie" : "duda"]]);
+    await decirGuion(dlg, bien ? "autopsia_veredicto" : "cierre_flojo", esc);
+    await sumar(puntos, dlg);
+    lbl.textContent = "Informe firmado";
+    zona.append(tarjeta(bien ? "bg-ok_bg" : "",
+      el("h2", bien ? "🩻 Informe firmado" : "🩻 Informe con reparos"),
+      el("p", `${aciertosCaso} de ${pasos} aciertos · +${puntos} puntos`),
+      el("div.fila.envuelve", boton("Otra autopsia", () => mesa(k), "primario"), boton("Volver a la sede", () => sede(k), "secundario"))));
   }
 
   // ---------------------------------------------------------------- arranque

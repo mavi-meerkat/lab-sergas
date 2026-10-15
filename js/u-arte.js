@@ -243,6 +243,16 @@ export const ESCENAS = {
       <rect width="800" height="450" fill="url(#frio)"/>`,
     `<linearGradient id="frio" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5FB0FF" stop-opacity=".18"/><stop offset="1" stop-color="#0A1520" stop-opacity=".7"/></linearGradient>`);
   },
+  morgue: () => ESC(`<rect width="800" height="450" fill="#1A2026"/>
+    ${[0, 1, 2].map((f) => [0, 1, 2, 3, 4, 5].map((c) => `<rect x="${40 + c * 125}" y="${30 + f * 80}" width="110" height="66" rx="4" fill="url(#acero2)" stroke="#5A646E" stroke-width="2"/>
+      <rect x="${80 + c * 125}" y="${56 + f * 80}" width="30" height="8" rx="3" fill="#2A3036"/><rect x="${52 + c * 125}" y="${40 + f * 80}" width="24" height="12" fill="#E8E2D0" opacity=".85"/>`).join("")).join("")}
+    <path d="M400 0 L400 40" stroke="#555" stroke-width="3"/><ellipse cx="400" cy="48" rx="70" ry="14" fill="#C9D1D9"/>
+    <path d="M330 52 L180 330 L620 330 L470 52z" fill="#E6F0FF" opacity=".07"/>
+    <rect y="330" width="800" height="120" fill="#11161A"/>
+    <rect x="200" y="300" width="400" height="26" rx="6" fill="url(#acero2)" stroke="#5A646E" stroke-width="2"/>
+    <path d="M250 300 Q400 262 560 300z" fill="#DDE6EE" opacity=".9"/>
+    <rect x="230" y="326" width="12" height="70" fill="#4E565E"/><rect x="558" y="326" width="12" height="70" fill="#4E565E"/>`,
+  `<linearGradient id="acero2" x1="0" x2="1"><stop offset="0" stop-color="#7C858E"/><stop offset=".5" stop-color="#C9D0D6"/><stop offset="1" stop-color="#6E777F"/></linearGradient>`),
   laboratorio: (tinte = "#3FE0FF") => ESC(`<rect width="800" height="450" fill="#121820"/>
     <rect x="0" y="0" width="800" height="260" fill="url(#cristal)"/>
     ${[60, 260, 460, 660].map((x) => `<rect x="${x}" y="40" width="160" height="110" rx="6" fill="#0B1118" stroke="${tinte}" stroke-width="2" opacity=".9"/>

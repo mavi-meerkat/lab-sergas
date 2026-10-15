@@ -157,6 +157,19 @@ export const GUION = {
     ["duarte", "sorpresa", "Todas las pruebas conectadas. El tablero… ya no tiene secretos."],
     ["marco", "sonrie", "Mira qué tablero más bonito ha quedado. Lo enmarcaría."],
   ],
+  autopsia_intro: [
+    ["carmen", "neutro", "Pasa, cariño. Nuestro paciente ya no tiene prisa, pero nosotras sí."],
+    ["carmen", "serio", "Antes de abrir, hagamos las cosas bien. Aquí el protocolo no es opcional."],
+    ["duarte", "neutro", "La víctima no puede hablar. Pero su química sí."],
+  ],
+  autopsia_analitica: [
+    ["valeria", "neutro", "Ingresó en urgencias antes de morir. Tengo su analítica completa."],
+    ["iker", "neutro", "He rescatado los resultados del laboratorio del hospital. Míralos con calma."],
+  ],
+  autopsia_veredicto: [
+    ["carmen", "sonrie", "Eso es. Ya puedo firmar el informe."],
+    ["duarte", "sorpresa", "La química no miente. Y ahora… tampoco el informe."],
+  ],
   charla: [
     ["duarte", "neutro", "No me mires así. Las gafas de sol son parte del protocolo."],
     ["valeria", "neutro", "He contado los pasos hasta la máquina de café. Ciento doce. Es ineficiente."],

@@ -405,3 +405,7 @@ h3.modulo { margin: 18px 0 6px; font-size: 17px; }
 .u-ficha-sig.unida { background: #E6F4EA; }
 .u-chincheta { position: absolute; top: -6px; left: 50%; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #FF7A7A, #A0121E); box-shadow: 0 2px 2px rgba(0,0,0,.4); transform: translateX(-50%); }
 @media (max-width: 700px) { .u-tab-cols { gap: 14px; } .u-nota, .u-ficha-sig { font-size: 13.5px; } }
+.u-analitica { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 15px; color: #1E1A14; }
+.u-analitica th { text-align: left; font: 700 11px "Courier New", monospace; color: #6E5A30; border-bottom: 2px solid #B8A574; padding: 4px 6px; }
+.u-analitica td { padding: 6px; border-bottom: 1px dashed #C9B88A; } .u-analitica td.suave { color: #6E5A30; }
+.u-analitica tr.fuera td b { color: #A3123A; } .u-analitica tr.fuera td b::after { content: " *"; }
