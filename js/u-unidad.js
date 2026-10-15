@@ -1,5 +1,6 @@
 // Unidad de Análisis — aventura gráfica de estudio (se carga solo al entrar).
 // Primera entrega: sede central con rangos, El interrogatorio y Casos sin resolver.
+import { panelVelocidades } from "./velocidades.js";
 import { A } from "./ctx.js";
 import { el, boton, tarjeta, rico, barra, toast, segmentado } from "./ui.js";
 import { bloquePregunta, teclasPregunta, limpia } from "./pregunta.js";
@@ -154,13 +155,15 @@ export function vistaUnidad(main, args = {}, ctlExterno = null) {
     const r = rango(U.puntos);
     main.append(el("div.fila.entre.envuelve",
       el("h1", "🔎 Unidad de Análisis"),
-      el("div.fila.envuelve", el("span.suave.peq", "Velocidad de las voces:"),
-        segmentado(["1×", "1,15×", "1,3×", "1,5×", "1,75×"], { 1: "1×", 1.15: "1,15×", 1.3: "1,3×", 1.5: "1,5×", 1.75: "1,75×" }[Number(A.p.get("unidad_vel", 1.3))] || "1,3×",
-          (v) => A.p.set("unidad_vel", { "1×": 1, "1,15×": 1.15, "1,3×": 1.3, "1,5×": 1.5, "1,75×": 1.75 }[v])),
+      el("div.fila.envuelve",
+        boton("⏩ Velocidades", () => { velPanel.hidden = !velPanel.hidden; }, "fantasma"),
         boton(A.p.get("unidad_voz", true) !== false ? "🔊 Voces" : "🔇 Voces", (e) => {
         const on = A.p.get("unidad_voz", true) === false;
         A.p.set("unidad_voz", on); e.target.textContent = on ? "🔊 Voces" : "🔇 Voces"; if (!on) callar();
       }, "fantasma"))));
+    const velPanel = tarjeta("", el("h3", "Velocidad de cada personaje"), el("p.suave.peq", "Se aplica a sus voces en el juego. También puedes cambiarlo en Ajustes."), panelVelocidades());
+    velPanel.hidden = true;
+    main.append(velPanel);
     // ficha de Anna
     const prog = r.hasta ? (U.puntos - r.desde) / (r.hasta - r.desde) : 1;
     main.append(tarjeta("u-ficha",

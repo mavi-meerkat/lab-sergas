@@ -1,4 +1,5 @@
 // Vistas «Por validar» y «Ajustes».
+import { panelVelocidades } from "./velocidades.js";
 import { A } from "./ctx.js";
 import { el, boton, chip, tarjeta, segmentado, confirmar, aviso, toast } from "./ui.js";
 import { ESTADOS_VALIDACION, necesitaValidar, kvDel } from "./content.js";
@@ -152,6 +153,9 @@ export function vistaAjustes(main) {
   fila("Velocidad de la clase en audio", "Velocidad por defecto del modo clase.",
     segmentado(["1×", "1,25×", "1,5×"], { 1: "1×", 1.25: "1,25×", 1.5: "1,5×" }[Number(p.get("clase_vel", 1.25))] || "1×",
       (v) => p.set("clase_vel", { "1×": 1, "1,25×": 1.25, "1,5×": 1.5 }[v])));
+
+  main.append(tarjeta("fila-opcion", el("div.flex1", el("h3", "Voces de los personajes"),
+    el("p.suave.peq", "Velocidad de cada personaje de la Unidad de Análisis."), panelVelocidades())));
 
   const estAudio = el("span.suave.peq", "");
   const bAudio = boton("Descargar audios", () => A.descargarAudios(estAudio, bAudio), "secundario");

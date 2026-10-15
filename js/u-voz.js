@@ -2,6 +2,10 @@
 // · Frases fijas del guion: audio grabado con Piper (audio/u/<clave>.ogg) si existe en audio/u/indice.json.
 // · Todo lo demás (enunciados, opciones, explicaciones): voz del dispositivo con tono y velocidad por personaje.
 import { A } from "./ctx.js";
+import { velocidad } from "./velocidades.js";
+
+// Personajes cuya voz grabada ha cambiado: sus frases se guardan con otra clave para no reutilizar las antiguas.
+const CLAVE_VOZ = { carmen: "carmen_a" };
 
 let indice = null;          // Set de claves grabadas
 let cargando = null;
@@ -44,7 +48,7 @@ const limpiaVoz = (s) => String(s || "")
   .replace(/µ[lL]\b/g, " microlitros").replace(/\bm[lL]\b/g, " mililitros").replace(/º\s?C|°\s?C/g, " grados")
   .replace(/\s+/g, " ").trim();
 
-function hablarDispositivo(texto, perfil, gen) {
+function hablarDispositivo(texto, perfil, gen, quien) {
   return new Promise((ok) => {
     if (!window.speechSynthesis) return ok();
     const partes = limpiaVoz(texto).match(/[^.!?;]+[.!?;]*/g) || [];
@@ -55,7 +59,7 @@ function hablarDispositivo(texto, perfil, gen) {
       const u = new SpeechSynthesisUtterance(partes[i++]);
       u.lang = "es-ES"; if (v) u.voice = v;
       u.pitch = Math.max(0.1, Math.min(2, perfil.tono || 1));
-      u.rate = (perfil.vel || 1) * Number(A.p ? A.p.get("unidad_vel", 1.3) : 1);
+      u.rate = (perfil.vel || 1) * velocidad(quien);
       u.onend = sig; u.onerror = sig;
       speechSynthesis.speak(u);
     };
@@ -80,15 +84,15 @@ export async function decir(texto, quienVoz, perfil, fija = false) {
   if (!vozActiva() || !texto) return;
   if (fija) {
     const idx = await cargarIndice();
-    const k = await claveFrase(quienVoz, texto);
+    const k = await claveFrase(CLAVE_VOZ[quienVoz] || quienVoz, texto);
     if (gen !== generacion) return;
     if (idx.has(k)) {
       const a = new Audio(`audio/u/${k}.ogg`);
-      a.playbackRate = Number(A.p ? A.p.get("unidad_vel", 1.3) : 1);
+      a.playbackRate = velocidad(quienVoz);
       audioActual = a;
       await new Promise((ok) => { a.onended = ok; a.onerror = ok; a.play().catch(ok); });
       return;
     }
   }
-  await hablarDispositivo(texto, perfil || { g: "h" }, gen);
+  await hablarDispositivo(texto, perfil || { g: "h" }, gen, quienVoz);
 }

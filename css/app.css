@@ -438,3 +438,7 @@ h3.modulo { margin: 18px 0 6px; font-size: 17px; }
 .u-capa:disabled { opacity: .4; cursor: default; }
 .u-capa.bien { border-color: var(--ok); }
 @media (max-width: 600px) { .u-emb-zona { grid-template-columns: 1fr; } .u-embalaje { max-width: 220px; margin: 0 auto; } }
+/* velocidades por personaje */
+.u-velocidades { display: grid; gap: 6px; margin-top: 8px; }
+.u-vel-fila { align-items: center; gap: 10px; }
+.u-vel-nombre { min-width: 110px; }
