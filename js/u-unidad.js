@@ -217,7 +217,7 @@ export function vistaUnidad(main, args = {}, ctlExterno = null) {
       juegoBtn("🗣️", "El interrogatorio", "Cuatro sospechosos, una verdad. Preguntas de esta sede.", () => interrogatorio(k)),
       juegoBtn("🗄️", `Casos sin resolver (${nFrios})`, "Lo que se te resiste de los módulos de esta sede.", () => archivo(k), nFrios === 0),
       juegoBtn("🧪", "El laboratorio identifica al culpable", "ADN, grupos sanguíneos y microscopía.", () => laboratorio(k)),
-      juegoBtn("📌", "El tablero de pruebas", "Une cada prueba con su significado.", null, true, "Próximamente"),
+      juegoBtn("📌", "El tablero de pruebas", "Une cada prueba con su significado.", () => tablero(k)),
       juegoBtn("🩻", "La mesa de autopsias", "Bioquímica, gasometría y causa de la muerte.", null, true, "Próximamente"),
       juegoBtn("🧫", "El caso de la muestra", "¿Dónde falló la preanalítica?", null, true, "Próximamente"),
       juegoBtn("🔗", "Cadena de custodia", "Encuentra el eslabón roto.", null, true, "Próximamente"));
@@ -676,6 +676,147 @@ export function vistaUnidad(main, args = {}, ctlExterno = null) {
     if (!vivo) return {};
     const acusacion = await acusar(zona, dlg, sos, cartas.map((c) => `Su laboratorio cultiva: ${c.n.split(" · ")[1] || c.n}`), culpable);
     return { interpretacion, acusacion };
+  }
+
+  // ================================================================ EL TABLERO DE PRUEBAS
+  // Sale de las tablas de las lecciones: cada fila es una prueba (primera columna) y su significado (otra columna).
+  const limpiaMd = (x) => String(x ?? "").replace(/\*\*/g, "").replace(/(^|\s)_([^_]+)_/g, "$1$2").trim();
+  function tablasSede(k) {
+    const s = SEDES[k], hechas = A.p.leccionesCompletadas();
+    const out = [];
+    for (const [lid, l] of Object.entries(A.c.lecciones)) {
+      const u = A.c.unidades[lid];
+      if (!u || !s.modulos.includes(u.modulo)) continue;
+      l.tarjetas.forEach((t) => {
+        const tb = t.tipo === "tabla" ? t : t.tabla;
+        if (!tb || !Array.isArray(tb.filas) || tb.filas.length < 4 || (tb.columnas || []).length < 2) return;
+        out.push({ lid, titulo: limpiaMd(t.titulo || ""), cols: tb.columnas.map(limpiaMd), filas: tb.filas.map((f) => f.map(limpiaMd)), hecha: hechas.has(lid) });
+      });
+    }
+    const est = out.filter((x) => x.hecha);
+    return est.length >= 3 ? est : out;
+  }
+  function montarTablero(tb) {
+    // columna de significados: la que tenga valores distintos y no demasiado largos
+    const cand = [];
+    for (let j = 1; j < tb.cols.length; j++) {
+      const filas = tb.filas.filter((f) => f[0] && f[j] && f[j].length <= 120 && f[0].length <= 70);
+      const unicos = (i) => new Set(filas.map((f) => f[i].toLowerCase())).size === filas.length;
+      if (filas.length >= 4 && unicos(0) && unicos(j)) cand.push([j, filas]);
+    }
+    if (!cand.length) return null;
+    const [j, filas] = elegirUna(cand);
+    const pares = azar.shuffle([...filas]).slice(0, 5).map((f) => [f[0], f[j]]);
+    const sub = tb.cols[0] === "" || tb.cols.length > 2 ? tb.cols[j] : "";
+    return { titulo: tb.titulo, sub, colA: tb.cols[0] || "Prueba", colB: tb.cols[j], pares, lid: tb.lid };
+  }
+
+  async function tablero(k) {
+    callar();
+    const s = SEDES[k];
+    let datos = null;
+    for (const tb of azar.shuffle(tablasSede(k))) { datos = montarTablero(tb); if (datos) break; }
+    if (!datos) { toast("No hay tablas disponibles en esta sede."); return; }
+    main.replaceChildren();
+    const esc = escena(ESCENAS.laboratorio(s.tinte), [["marco", "neutro"], ["anna", "neutro"]]);
+    const dlg = dialogo();
+    const zona = el("div.u-zona");
+    const lbl = el("span.suave.peq");
+    main.append(el("div.fila.entre", el("div.fila", boton("← Sede", () => sede(k), "fantasma"), el("h2", "📌 El tablero de pruebas")), lbl), esc, dlg, zona);
+    teclasDialogo(dlg);
+    await decirGuion(dlg, "tablero_intro", esc);
+    if (!vivo) return;
+    esc.classList.add("compacta");
+    const u = A.c.unidades[datos.lid];
+    const n = datos.pares.length;
+    let unidos = 0, errores = 0, sel = null;
+    const marcar = () => (lbl.textContent = `${unidos} de ${n} conectadas · ${errores} hilos mal puestos`);
+    marcar();
+    const izq = el("div.u-tab-col"), der = el("div.u-tab-col");
+    const hilos = el("div.u-hilos");
+    const corcho = el("div.u-corcho", hilos, el("div.u-tab-cols", izq, der));
+    zona.append(el("div.u-tab-cab", el("b", `📌 ${datos.titulo}${datos.sub ? " · " + datos.sub : ""}`),
+      el("span.suave.peq", `M${u.modulo}·U${u.numero} · Toca una prueba y luego su significado.`)), corcho);
+    const conexiones = [];
+    function dibujarHilos() {
+      const r0 = corcho.getBoundingClientRect();
+      const lineas = conexiones.map(([a, b, cls]) => {
+        const ra = a.querySelector(".u-chincheta").getBoundingClientRect(), rb = b.querySelector(".u-chincheta").getBoundingClientRect();
+        const x1 = ra.left + ra.width / 2 - r0.left, y1 = ra.top + ra.height / 2 - r0.top, x2 = rb.left + rb.width / 2 - r0.left, y2 = rb.top + rb.height / 2 - r0.top;
+        const cx = (x1 + x2) / 2, cy = Math.max(y1, y2) + 24;
+        return `<path d="M${x1} ${y1} Q${cx} ${cy} ${x2} ${y2}" class="${cls}"/>`;
+      }).join("");
+      hilos.innerHTML = `<svg width="${r0.width}" height="${r0.height}">${lineas}</svg>`;
+    }
+    const alRedimensionar = () => dibujarHilos();
+    window.addEventListener("resize", alRedimensionar);
+    const quitar = () => window.removeEventListener("resize", alRedimensionar);
+    const pruebas = datos.pares.map(([a], i) => {
+      const n1 = el("button.u-nota", { type: "button" }, el("span.u-chincheta"), el("span", a));
+      n1.dataset.i = i;
+      n1.onclick = () => {
+        if (n1.classList.contains("unida")) return;
+        pruebas.forEach((x) => x.classList.remove("sel"));
+        sel = n1; n1.classList.add("sel");
+      };
+      return n1;
+    });
+    const orden = azar.shuffle(datos.pares.map((_, i) => i));
+    const signif = orden.map((i) => {
+      const n2 = el("button.u-ficha-sig", { type: "button" }, el("span.u-chincheta"), el("span", datos.pares[i][1]));
+      n2.dataset.i = i;
+      n2.onclick = async () => {
+        if (!sel || n2.classList.contains("unida")) return;
+        const a = sel; sel = null; a.classList.remove("sel");
+        if (a.dataset.i === n2.dataset.i) {
+          a.classList.add("unida"); n2.classList.add("unida");
+          conexiones.push([a, n2, "bien"]); unidos++; marcar(); dibujarHilos();
+          if (unidos === n) terminar();
+          else decirGuion(dlg, "tablero_bien");
+        } else {
+          errores++; marcar();
+          const tmp = [a, n2, "mal"]; conexiones.push(tmp); dibujarHilos();
+          n2.classList.add("temblar"); a.classList.add("temblar");
+          setTimeout(() => { conexiones.splice(conexiones.indexOf(tmp), 1); dibujarHilos(); n2.classList.remove("temblar"); a.classList.remove("temblar"); }, 700);
+          decirGuion(dlg, "tablero_mal");
+        }
+      };
+      return n2;
+    });
+    izq.append(el("div.u-tab-tit", datos.colA || "Prueba"), ...pruebas);
+    der.append(el("div.u-tab-tit", datos.colB || "Significado"), ...signif);
+    requestAnimationFrame(dibujarHilos);
+    ctl.teclas = (e) => { if (e.key === "Enter" || e.key === " ") { dlg.avanzar(); return true; } return false; };
+    const finAnterior = ctl.destruir;
+    ctl.destruir = () => { quitar(); finAnterior(); };
+
+    async function terminar() {
+      await decirGuion(dlg, "tablero_fin");
+      if (!vivo) return;
+      let puntos = Math.max(5, n * 6 - errores * 3);
+      // el tribunal: una pregunta de la misma unidad
+      const qs = preguntasDe([datos.lid], 1);
+      if (qs.length) {
+        await decirGuion(dlg, "lab_tribunal");
+        const ok = await new Promise((res) => {
+          const b = bloquePregunta(qs[0], { contexto: "unidad", onFin: (bien) => res(bien) });
+          ctl.teclas = (e) => teclasPregunta(b, e);
+          zona.append(el("div.u-expediente.tira", el("div.u-exp-cab", "PREGUNTA DEL TRIBUNAL")), tarjeta("u-exp-cuerpo", b));
+          b.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        });
+        if (ok) puntos += PUNTOS.acierto;
+      }
+      if (!vivo) return;
+      teclasDialogo(dlg);
+      U = estado(); U.casos += 1; guardar(U);
+      await sumar(puntos, dlg);
+      zona.append(tarjeta(errores <= 1 ? "bg-ok_bg" : "",
+        el("h2", errores === 0 ? "📌 Tablero perfecto" : "📌 Tablero completado"),
+        el("p", `${n} pruebas conectadas con ${errores} error(es) · +${puntos} puntos`),
+        el("div.fila.envuelve", boton("Otro tablero", () => { quitar(); tablero(k); }, "primario"),
+          boton("Ver la lección", () => { quitar(); A.abrirLeccion(datos.lid, 0); }, "secundario"),
+          boton("Volver a la sede", () => { quitar(); sede(k); }, "fantasma"))));
+    }
   }
 
   // ---------------------------------------------------------------- arranque

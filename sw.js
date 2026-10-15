@@ -1,5 +1,5 @@
 // Service worker de LAB SERGAS: la app funciona sin conexión.
-const VERSION = "v6";
+const VERSION = "v7";
 const SHELL = "shell-" + VERSION;
 const AUDIO = "audio-v1";
 const FB = "https://www.gstatic.com/firebasejs/10.12.2/";

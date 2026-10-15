@@ -388,3 +388,20 @@ h3.modulo { margin: 18px 0 6px; font-size: 17px; }
 .u-gel { overflow-x: auto; } .u-gel svg { width: 100%; max-width: 520px; height: auto; display: block; margin: 6px auto; }
 .u-lab-pregunta { margin: 12px 0 8px; } .u-lab-opciones { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 8px; }
 .u-lab-expl { margin-top: 8px; padding: 8px 12px; background: var(--panel2); border-radius: 10px; }
+.u-tab-cab { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+.u-corcho { position: relative; border-radius: 14px; padding: 18px 14px; border: 10px solid #6E4A2A;
+  background: radial-gradient(circle at 20% 30%, rgba(0,0,0,.08) 0 2px, transparent 3px) 0 0 / 14px 14px, radial-gradient(circle at 70% 60%, rgba(255,255,255,.06) 0 2px, transparent 3px) 0 0 / 18px 18px, #B98A55; }
+.u-hilos { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.u-hilos svg { position: absolute; inset: 0; } .u-hilos path { fill: none; stroke-width: 3; stroke-linecap: round; }
+.u-hilos path.bien { stroke: #C0182A; opacity: .7; filter: drop-shadow(0 1px 1px rgba(0,0,0,.4)); } .u-hilos path.mal { stroke: #333; stroke-dasharray: 6 5; }
+.u-tab-cols { display: grid; grid-template-columns: 1fr 1.3fr; gap: 28px; position: relative; z-index: 1; }
+.u-tab-col { display: flex; flex-direction: column; gap: 10px; }
+.u-tab-tit { font: 800 12px "Courier New", monospace; color: #3A2412; text-transform: uppercase; background: rgba(255,255,255,.6); align-self: flex-start; padding: 2px 8px; border-radius: 4px; }
+.u-nota, .u-ficha-sig { position: relative; text-align: left; border: 0; cursor: pointer; font: 600 14.5px/1.35 var(--fuente); color: #1E1A14; padding: 14px 12px 10px; box-shadow: 2px 3px 6px rgba(0,0,0,.35); transition: transform .1s; }
+.u-nota { background: #FFE97A; transform: rotate(-1deg); } .u-nota:nth-child(odd) { transform: rotate(1.2deg); }
+.u-ficha-sig { background: #FFFDF6; border-top: 4px solid #8FB6E3; font-weight: 500; }
+.u-nota.sel { outline: 3px solid #C0182A; transform: scale(1.03); }
+.u-nota.unida, .u-ficha-sig.unida { opacity: .8; cursor: default; }
+.u-ficha-sig.unida { background: #E6F4EA; }
+.u-chincheta { position: absolute; top: -6px; left: 50%; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #FF7A7A, #A0121E); box-shadow: 0 2px 2px rgba(0,0,0,.4); transform: translateX(-50%); }
+@media (max-width: 700px) { .u-tab-cols { gap: 14px; } .u-nota, .u-ficha-sig { font-size: 13.5px; } }

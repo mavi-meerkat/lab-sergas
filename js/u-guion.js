@@ -138,6 +138,25 @@ export const GUION = {
     ["valeria", "neutro", "El juez querrá saber si dominas la técnica. Dos preguntas más."],
     ["duarte", "neutro", "Un buen caso se gana en el laboratorio… y se defiende en el juicio. Responde."],
   ],
+  tablero_intro: [
+    ["duarte", "neutro", "El tablero de pruebas, Anna. Une cada prueba con lo que significa. Y no me gastes todo el hilo rojo."],
+    ["marco", "sonrie", "Chinchetas, hilo rojo y fotos en el corcho. Esto sí que es una investigación de verdad."],
+    ["valeria", "neutro", "He colgado las pruebas. Cada una tiene exactamente una explicación correcta. Ni más ni menos."],
+  ],
+  tablero_bien: [
+    ["iker", "sonrie", "¡Conectado!"],
+    ["marco", "sonrie", "Eso encaja."],
+    ["valeria", "neutro", "Correcto."],
+  ],
+  tablero_mal: [
+    ["duarte", "serio", "Esas dos no tienen nada que ver."],
+    ["valeria", "neutro", "No. Esa relación no existe."],
+    ["iker", "duda", "Mmm… ese hilo no va ahí."],
+  ],
+  tablero_fin: [
+    ["duarte", "sorpresa", "Todas las pruebas conectadas. El tablero… ya no tiene secretos."],
+    ["marco", "sonrie", "Mira qué tablero más bonito ha quedado. Lo enmarcaría."],
+  ],
   charla: [
     ["duarte", "neutro", "No me mires así. Las gafas de sol son parte del protocolo."],
     ["valeria", "neutro", "He contado los pasos hasta la máquina de café. Ciento doce. Es ineficiente."],
