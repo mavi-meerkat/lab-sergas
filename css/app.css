@@ -419,3 +419,22 @@ h3.modulo { margin: 18px 0 6px; font-size: 17px; }
 .u-gradilla { display: flex; flex-wrap: wrap; gap: 6px; min-height: 120px; padding: 10px; border-radius: 12px; background: repeating-linear-gradient(90deg, #8C6A43 0 6px, #A07B50 6px 60px); align-items: flex-end; }
 .u-hueco { display: flex; flex-direction: column; align-items: center; color: #FFF7E8; text-shadow: 0 1px 2px #0008; }
 .u-hueco .u-tubo-svg { width: 32px; height: 70px; }
+/* Unidad · cadena de custodia */
+.u-cadena { display: flex; flex-direction: column; gap: 0; }
+.u-eslabon { display: flex; gap: 12px; align-items: flex-start; text-align: left; padding: 10px 14px; margin: 0; border: 2px solid var(--borde); border-radius: 12px; background: var(--panel); color: inherit; font: inherit; cursor: pointer; position: relative; }
+.u-eslabon + .u-eslabon { margin-top: 14px; }
+.u-eslabon + .u-eslabon::before { content: ""; position: absolute; left: 26px; top: -16px; width: 10px; height: 14px; border: 3px solid #8A93A0; border-radius: 6px; }
+.u-eslabon p { margin: 4px 0 0; }
+.u-eslabon:hover:not(:disabled) { border-color: var(--acento); }
+.u-eslabon:disabled { cursor: default; }
+.u-eslabon.roto { border-color: var(--mal); background: var(--mal_bg); }
+.u-eslabon.error { border-style: dashed; opacity: .8; }
+.u-esl-n { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; background: var(--panel2); }
+.u-emb-zona { display: grid; grid-template-columns: minmax(160px, 240px) 1fr; gap: 12px; align-items: center; }
+.u-embalaje-svg { width: 100%; height: auto; }
+.u-capas { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.u-capa { display: flex; flex-direction: column; gap: 2px; padding: 10px; border: 2px solid var(--borde); border-radius: 12px; background: var(--panel); color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.u-capa:hover:not(:disabled) { border-color: var(--acento); }
+.u-capa:disabled { opacity: .4; cursor: default; }
+.u-capa.bien { border-color: var(--ok); }
+@media (max-width: 600px) { .u-emb-zona { grid-template-columns: 1fr; } .u-embalaje { max-width: 220px; margin: 0 auto; } }

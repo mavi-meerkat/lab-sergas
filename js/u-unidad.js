@@ -220,7 +220,7 @@ export function vistaUnidad(main, args = {}, ctlExterno = null) {
       juegoBtn("📌", "El tablero de pruebas", "Une cada prueba con su significado.", () => tablero(k)),
       juegoBtn("🩻", "La mesa de autopsias", "Protocolo, gasometría, bilirrubina y electrolitos.", () => mesa(k)),
       juegoBtn("🧫", "El caso de la muestra", "¿Dónde falló la preanalítica? Tubos, tiempos y temperaturas.", () => muestra(k)),
-      juegoBtn("🔗", "Cadena de custodia", "Encuentra el eslabón roto.", null, true, "Próximamente"));
+      juegoBtn("🔗", "Cadena de custodia", "Encuentra el eslabón roto. Firmas, precintos y triple embalaje.", () => custodia(k)));
     main.append(juegos);
     teclasDialogo(dlg);
     await decirGuion(dlg, "sede_" + k, esc);
@@ -1198,6 +1198,266 @@ export function vistaUnidad(main, args = {}, ctlExterno = null) {
       el("p.peq", `El fallo: ${fallo}.`),
       el("div.fila.envuelve", boton("Otra muestra", () => muestra(k), "primario"),
         boton("Ver la lección", () => A.abrirLeccion(m.lid || "M1_U4", 0), "secundario"),
+        boton("Volver a la sede", () => sede(k), "fantasma"))));
+  }
+
+  // ================================================================ CADENA DE CUSTODIA
+  // La muestra forense viaja por 7 eslabones (M1·U3 cadena de custodia, M1·U6 triple embalaje, transporte y
+  // recepción, M5·U8 cribado y confirmación de drogas). Uno está roto. Después, preparar un envío con triple
+  // embalaje y su clasificación ONU, y la pregunta del tribunal.
+  const NOMBRES_CUST = ["L. Pereira", "M. Castro", "J. Otero", "R. Varela", "S. Lago", "C. Rial", "P. Seoane", "A. Novo", "D. Iglesias"];
+  const MUESTRAS_CUST = [
+    { que: "Orina · drogas de abuso", motivo: "conductor implicado en un accidente con heridos", envase: "Frasco estéril de orina" },
+    { que: "Sangre · drogas de abuso", motivo: "agresión en un local de ocio", envase: "Tubo de sangre" },
+    { que: "Orina · drogas de abuso", motivo: "control antidopaje de un ciclista profesional", envase: "Frasco estéril de orina" },
+  ];
+  /** Eslabones de la cadena. Cada uno: [título, texto correcto(ctx), [errores {t, por, q}]]. */
+  const ESLABONES = [
+    ["Toma de la muestra", (c) => `${c.envase} recogido por ${c.n[0]} a las ${c.h[0]}. Donante identificado con su DNI. Acta firmada por quien recoge y por un testigo.`, [
+      { t: (c) => `${c.envase} recogido a las ${c.h[0]}. Donante identificado con su DNI. El acta queda sin firmar: «ya se firmará en el laboratorio».`,
+        por: "En la cadena de custodia **cada responsable firma** en el momento en que tiene la muestra. Un acta sin firma deja un hueco: nadie responde de la muestra en ese tramo.",
+        q: ["¿Qué exige la cadena de custodia en cada paso?", ["Que firme cada responsable y que el embalaje vaya precintado", "Que la muestra viaje siempre congelada", "Que la analice el mismo técnico que la recogió", "Que el donante firme el informe final"], "Que firme cada responsable y que el embalaje vaya precintado",
+          "Muestras forenses: **cada responsable firma** y el embalaje va **precintado**."] },
+      { t: (c) => `${c.envase} recogido por ${c.n[0]} a las ${c.h[0]}. El donante dice su nombre en voz alta; no se comprueba ningún documento. Acta firmada.`,
+        por: "Sin **identificar** de verdad al donante, el resultado puede atribuirse a **otra persona**: el peor error preanalítico según el libro.",
+        q: ["Según el libro, ¿cuál es el peor error preanalítico?", ["Atribuir el resultado a otra persona por un error de identificación", "Usar un tubo de un color equivocado", "Centrifugar de más", "Llenar poco un tubo seco"], "Atribuir el resultado a otra persona por un error de identificación",
+          "El peor error: atribuir el resultado a **otra persona** por un fallo de **identificación**."] },
+    ]],
+    ["Envase primario", (c) => `Envase estanco, etiquetado con nombre, fecha y hora. Cerrado con el precinto nº ${c.p}. Firma: ${c.n[0]}.`, [
+      { t: (c) => `Envase estanco, etiquetado con nombre, fecha y hora. Se cierra con la tapa de rosca, sin precinto. Firma: ${c.n[0]}.`,
+        por: "Una muestra forense va **precintada**: sin precinto nadie puede asegurar que no se abrió por el camino.",
+        q: ["¿Por qué se precinta el embalaje de una muestra forense?", ["Para demostrar que nadie la ha abierto ni manipulado", "Para que no entre luz", "Para mantener la temperatura", "Porque lo exige la categoría B"], "Para demostrar que nadie la ha abierto ni manipulado",
+          "El **precinto** garantiza que la muestra no se ha abierto: es parte de la **cadena de custodia**."] },
+    ]],
+    ["Embalaje secundario", () => "Envase primario envuelto en material absorbente suficiente para todo su contenido, dentro de un secundario estanco con gradilla. Refrigerante colocado entre el secundario y la caja exterior.", [
+      { t: () => "Envase primario dentro de un secundario estanco con gradilla, sin material absorbente. Refrigerante colocado entre el secundario y la caja exterior.",
+        por: "El primario va **envuelto en material absorbente suficiente** para absorber todo el líquido si se rompe.",
+        q: ["¿Qué rodea al recipiente primario en el triple embalaje?", ["Material absorbente suficiente para todo el líquido", "El refrigerante", "Las etiquetas de peligro", "El material amortiguador de la caja exterior"], "Material absorbente suficiente para todo el líquido",
+          "Primario **estanco**, bien etiquetado y **envuelto en material absorbente** suficiente para todo su contenido."] },
+      { t: () => "Envase primario envuelto en material absorbente, dentro de un secundario estanco. El hielo seco se mete dentro del secundario, pegado al envase.",
+        por: "El refrigerante (hielo, **hielo seco** o nitrógeno líquido) va **entre el embalaje secundario y el exterior**, nunca dentro del secundario.",
+        q: ["¿Dónde se coloca el refrigerante en el triple embalaje?", ["Entre el embalaje secundario y el exterior", "Dentro del recipiente primario", "Dentro del secundario, junto al primario", "Fuera de la caja exterior"], "Entre el embalaje secundario y el exterior",
+          "Refrigerante **entre el secundario y el exterior**; con hielo seco, el embalaje debe **dejar escapar el CO₂**."] },
+    ]],
+    ["Embalaje exterior", (c) => `Caja rígida de 20 × 15 cm con material amortiguador. Marcas: expedidor, destinatario y contenido. Cierre con el precinto nº ${c.p2}. Firma: ${c.n[1]}.`, [
+      { t: (c) => `Caja de 8 × 8 cm con material amortiguador. Marcas: expedidor, destinatario y contenido. Cierre con el precinto nº ${c.p2}. Firma: ${c.n[1]}.`,
+        por: "El embalaje exterior **no puede tener ninguna cara menor de 10 × 10 cm**: así no se pierde y caben las marcas y etiquetas.",
+        q: ["¿Qué tamaño mínimo tiene cada cara del embalaje exterior?", ["10 × 10 cm", "5 × 5 cm", "20 × 20 cm", "No hay mínimo"], "10 × 10 cm",
+          "**Ninguna cara menor de 10 × 10 cm.** Lleva las marcas y las etiquetas."] },
+    ]],
+    ["Transporte", (c) => `Entrega al mensajero ${c.n[2]} a las ${c.h[1]}: firman quien entrega y quien recibe; precinto nº ${c.p2} intacto. Viaje en vertical, sin agitación.`, [
+      { t: (c) => `Recogida a las ${c.h[1]}. El paquete se deja en el mostrador de mensajería y pasa allí la noche; nadie firma la entrega.`,
+        por: "Cada cambio de manos se **firma**. Una noche sin responsable rompe la cadena: no se puede demostrar quién tuvo la muestra.",
+        q: ["Una muestra forense pasa la noche sin que nadie firme. ¿Qué ha pasado?", ["Se ha roto la cadena de custodia", "Nada, si llega refrigerada", "Solo es un error administrativo sin importancia", "Hay que repetir el embalaje y seguir"], "Se ha roto la cadena de custodia",
+          "Sin la **firma** de cada responsable no hay **cadena de custodia**."] },
+    ]],
+    ["Recepción", (c) => `Recibida por ${c.n[3]} a las ${c.h[2]}, con guantes y bata. Precinto nº ${c.p2} intacto; embalaje y documentación revisados. Firma de recepción.`, [
+      { t: (c) => `Recibida por ${c.n[3]} a las ${c.h[2]}, con guantes y bata. Precinto nº ${c.pMal} intacto; embalaje y documentación revisados. Firma de recepción.`,
+        por: (c) => `El precinto que llega (**${c.pMal}**) **no es el mismo** que se puso al cerrar la caja (**${c.p2}**): tiene dos cifras cambiadas de sitio. Alguien abrió y volvió a cerrar, o hubo un cambio. Se **registra la incidencia** y la muestra **pierde valor de prueba**.`,
+        q: ["El número de precinto al llegar no coincide con el del envío. ¿Qué se hace?", ["Registrar la incidencia: la cadena de custodia está rota", "Nada si el precinto está intacto", "Corregir el número en el acta", "Analizarla sin decir nada"], "Registrar la incidencia: la cadena de custodia está rota",
+          "**Toda incidencia se registra.** Si el precinto no coincide, no se puede garantizar que la muestra no se manipuló."] },
+      { t: (c) => `Recibida por ${c.n[3]} a las ${c.h[2]}. El embalaje llega mojado y el envase, mal cerrado. Se procesa igualmente y no se anota nada.`,
+        por: "Roturas, derrames o envases mal cerrados son **criterios de rechazo**, y **toda incidencia se registra**, aunque no se rechace.",
+        q: ["¿Cuál de estos es un criterio de rechazo en la recepción?", ["Derrame o envase mal cerrado", "Llegar con triple embalaje", "Llevar etiqueta de orientación", "Llegar en menos de 2 horas"], "Derrame o envase mal cerrado",
+          "Se rechaza: sin etiqueta o volante, si no coinciden, tiempo superado, envase o conservante inadecuado, **roturas o derrames**, hisopos secos, cantidad insuficiente. **Toda incidencia se registra.**"] },
+    ]],
+    ["Análisis", (c) => `Cribado por inmunoanálisis: positivo. Confirmado por cromatografía de gases con espectrometría de masas. Firma: ${c.n[4]}.`, [
+      { t: (c) => `Cribado por inmunoanálisis: positivo. Se emite el informe como definitivo, sin más pruebas. Firma: ${c.n[4]}.`,
+        por: "El **inmunoanálisis** es solo un **cribado** (de presunción). Un positivo con valor judicial hay que **confirmarlo** con **cromatografía de gases + espectrometría de masas**.",
+        q: ["¿Con qué técnica se confirma un positivo de drogas de abuso?", ["Cromatografía de gases con espectrometría de masas", "Inmunoanálisis", "Tira reactiva de orina", "Electroforesis en gel"], "Cromatografía de gases con espectrometría de masas",
+          "1) **Cribado**: inmunoanálisis o POCT, cualitativo. 2) **Confirmación**: **cromatografía de gases + espectrometría de masas**. Si tiene valor judicial: **cadena de custodia**."] },
+    ]],
+  ];
+  const hora = (min) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+  /** Número de precinto de 5 cifras y una versión con dos cifras vecinas (distintas) intercambiadas. */
+  function precintos() {
+    const d = String(10000 + Math.floor(azar() * 89999)).split("");
+    const pares = [1, 2, 3].filter((i) => d[i] !== d[i + 1]);
+    if (!pares.length) { d[2] = String((Number(d[2]) + 3) % 10); pares.push(2); }
+    const n = d.join(""), i = elegirUna(pares);
+    [d[i], d[i + 1]] = [d[i + 1], d[i]];
+    return [n, d.join("")];
+  }
+
+  /** Muestra los eslabones; la jugadora toca el roto. Devuelve true si acierta. */
+  function eslabonRoto(zona, dlg, lista, mal, explicacion) {
+    return new Promise(async (res) => {
+      const cad = el("div.u-cadena");
+      let hecho = false;
+      lista.forEach(([tit, txt], i) => {
+        const b = el("button.u-eslabon", { type: "button" }, el("span.u-esl-n", String(i + 1)), el("div", el("b", tit), el("p.peq", txt)));
+        b.onclick = async () => {
+          if (hecho) return; hecho = true;
+          const ok = i === mal;
+          [...cad.children].forEach((x, j) => { x.disabled = true; if (j === mal) x.classList.add("roto"); else if (j === i) x.classList.add("error"); });
+          await decirGuion(dlg, ok ? "lab_bien" : "lab_mal");
+          cad.after(rico((ok ? "✔ " : `✘ El eslabón roto era el ${mal + 1}, «${lista[mal][0]}». `) + explicacion, "peq u-lab-expl"));
+          res(ok);
+        };
+        cad.append(b);
+      });
+      zona.append(el("div.u-lab-pregunta", el("b", "¿Qué eslabón está roto?")), cad);
+      ctl.teclas = (e) => {
+        if (/^[1-9]$/.test(e.key) && cad.children[Number(e.key) - 1]) { cad.children[Number(e.key) - 1].click(); return true; }
+        if (e.key === "Enter" || e.key === " ") { dlg.avanzar(); return true; }
+        return false;
+      };
+      await decirGuion(dlg, "custodia_eslabon");
+    });
+  }
+
+  // ---------------------------------------------------------------- triple embalaje
+  const CAPAS = [
+    { id: "primario", nombre: "Recipiente primario", d: "Estanco, con la muestra" },
+    { id: "absorbente", nombre: "Material absorbente", d: "Para todo el líquido" },
+    { id: "secundario", nombre: "Embalaje secundario", d: "Estanco, con gradilla" },
+    { id: "refrigerante", nombre: "Refrigerante", d: "Hielo seco o nitrógeno" },
+    { id: "exterior", nombre: "Embalaje exterior", d: "Rígido, con marcas" },
+  ];
+  function dibujoEmbalaje(n) {
+    // capas concéntricas que aparecen según se colocan
+    const capas = [
+      `<rect x="88" y="52" width="24" height="56" rx="8" fill="#F4F7FA" stroke="#5A6577" stroke-width="2"/><rect x="90" y="84" width="20" height="20" rx="6" fill="#E3C35A"/>`,
+      `<rect x="80" y="44" width="40" height="72" rx="12" fill="none" stroke="#C8B9A0" stroke-width="6" stroke-dasharray="4 3"/>`,
+      `<rect x="68" y="32" width="64" height="96" rx="8" fill="none" stroke="#4A78B8" stroke-width="4"/>`,
+      [[52, 40], [148, 50], [52, 112], [148, 118], [100, 22], [100, 140]].map(([x, y]) => `<rect x="${x - 6}" y="${y - 6}" width="12" height="12" rx="2" fill="#BFE6FF" stroke="#7AB8E0"/>`).join(""),
+      `<rect x="36" y="10" width="128" height="140" rx="6" fill="none" stroke="#9A6B3A" stroke-width="7"/>`,
+    ];
+    const vacio = n ? "" : `<text x="100" y="86" text-anchor="middle" font-size="12" fill="currentColor" opacity=".5">Empieza por dentro</text>`;
+    return `<svg viewBox="0 0 200 160" class="u-embalaje-svg">${vacio}${capas.slice(0, n).join("")}</svg>`;
+  }
+  function montarEmbalaje(zona, dlg) {
+    return new Promise((res) => {
+      let pos = 0, errores = 0;
+      const dibujo = el("div.u-embalaje", { html: dibujoEmbalaje(0) });
+      const fila = el("div.u-capas");
+      azar.shuffle([...CAPAS]).forEach((c) => {
+        const b = el("button.u-capa", { type: "button", "data-capa": c.id }, el("b", c.nombre), el("span.peq.suave", c.d));
+        b.onclick = () => {
+          if (b.disabled) return;
+          if (c.id === CAPAS[pos].id) {
+            b.disabled = true; b.classList.add("bien"); pos++;
+            dibujo.innerHTML = dibujoEmbalaje(pos);
+            if (pos >= CAPAS.length) { ctl.teclas = (e) => ((e.key === "Enter" || e.key === " ") && (dlg.avanzar(), true)); res(errores); }
+          } else {
+            errores++; b.classList.add("temblar"); setTimeout(() => b.classList.remove("temblar"), 600);
+            decirGuion(dlg, "custodia_capa_mal");
+          }
+        };
+        fila.append(b);
+      });
+      zona.append(el("div.u-lab-pregunta", el("b", "Monta el triple embalaje de dentro hacia fuera")), el("div.u-emb-zona", dibujo, fila));
+      ctl.teclas = (e) => {
+        if (/^[1-9]$/.test(e.key) && fila.children[Number(e.key) - 1]) { fila.children[Number(e.key) - 1].click(); return true; }
+        if (e.key === "Enter" || e.key === " ") { dlg.avanzar(); return true; }
+        return false;
+      };
+    });
+  }
+  const ENVIOS = [
+    { desc: "Cultivo de un microorganismo que puede causar una enfermedad mortal en personas.", ok: "UN 2814 · embalaje P620",
+      expl: "Puede causar discapacidad permanente o enfermedad mortal en **humanos** → **categoría A**, **UN 2814**, embalaje **P620**. Además: contacto 24 h y etiqueta de sustancia infecciosa." },
+    { desc: "Cultivo de un agente que puede causar una enfermedad mortal, pero solo en animales.", ok: "UN 2900 · embalaje P620",
+      expl: "Categoría A que afecta **solo a animales** → **UN 2900**, embalaje **P620**." },
+    { desc: "Muestra de un paciente con sospecha de infección que no cumple los criterios de la categoría A.", ok: "UN 3373 · embalaje P650",
+      expl: "Infecciosa pero sin los criterios de A → **categoría B**, **UN 3373 «Sustancia biológica, categoría B»**, embalaje **P650**." },
+    { desc: "Suero de una persona sana para un control de colesterol: mínima probabilidad de agentes infecciosos.", ok: "«Muestra humana exenta»",
+      expl: "Mínima probabilidad de agentes → **exenta**: «Muestra humana exenta», con **triple embalaje**." },
+  ];
+  const OPS_ENVIO = ["UN 2814 · embalaje P620", "UN 2900 · embalaje P620", "UN 3373 · embalaje P650", "«Muestra humana exenta»"];
+  const REFRIG = [
+    ["hielo seco", "Mercancías peligrosas diversas", "Si lleva **hielo seco**: etiqueta de **mercancías peligrosas diversas** (y el embalaje deja escapar el CO₂)."],
+    ["nitrógeno líquido", "Gas no inflamable ni tóxico", "Si lleva **nitrógeno líquido**: etiqueta de **gas no inflamable ni tóxico**."],
+  ];
+
+  async function custodia(k) {
+    callar();
+    const s = SEDES[k];
+    const caso = numeroCaso();
+    let puntos = 0, aciertosCaso = 0, pasos = 0;
+    main.replaceChildren();
+    const esc = escena(ESCENAS.laboratorio(s.tinte), [["duarte", "serio"], ["anna", "neutro"], ["marco", "neutro"]]);
+    const dlg = dialogo();
+    const zona = el("div.u-zona");
+    const lbl = el("span.suave.peq");
+    main.append(el("div.fila.entre", el("div.fila", boton("← Sede", () => sede(k), "fantasma"), el("h2", `🔗 Caso #${caso}`)), lbl), esc, dlg, zona);
+    teclasDialogo(dlg);
+    await decirGuion(dlg, "custodia_intro", esc);
+    if (!vivo) return;
+    esc.classList.add("compacta");
+    // 1. la cadena
+    lbl.textContent = "1 · La cadena";
+    const m = elegirUna(MUESTRAS_CUST);
+    const t0 = 8 * 60 + Math.floor(azar() * 120);
+    const [p1] = precintos(), [p2, pMal] = precintos();
+    const c = { ...m, p: "P-" + p1, p2: "P-" + p2, pMal: "P-" + pMal, n: azar.shuffle([...NOMBRES_CUST]),
+      h: [hora(t0), hora(t0 + 35 + Math.floor(azar() * 40)), hora(t0 + 160 + Math.floor(azar() * 60))] };
+    const mal = Math.floor(azar() * ESLABONES.length);
+    const err = elegirUna(ESLABONES[mal][2]);
+    const lista = ESLABONES.map(([tit, ok], i) => [tit, i === mal ? err.t(c) : ok(c)]);
+    const por = typeof err.por === "function" ? err.por(c) : err.por;
+    zona.replaceChildren(el("div.u-expediente", el("div.u-exp-cab", `CASO #${caso} · CADENA DE CUSTODIA`),
+      el("p", el("b", c.que), ` — ${c.motivo}.`), el("p.peq", "El resultado irá a juicio. Revisa el acta de cada eslabón: firmas, horas y precintos.")));
+    pasos++;
+    if (await eslabonRoto(zona, dlg, lista, mal, por)) { puntos += 15; aciertosCaso++; }
+    if (!vivo) return;
+    // 2. la consecuencia
+    lbl.textContent = "2 · La consecuencia";
+    const [t2, o2, k2, e2] = err.q;
+    pasos++;
+    if (await interpretar(zona, dlg, t2, azar.shuffle([...o2]), k2, e2)) { puntos += 10; aciertosCaso++; }
+    if (!vivo) return;
+    // 3. el envío
+    lbl.textContent = "3 · El envío";
+    zona.replaceChildren();
+    await decirGuion(dlg, "custodia_embalaje");
+    if (!vivo) return;
+    const env = elegirUna(ENVIOS), [refri, etiq, eExpl] = elegirUna(REFRIG);
+    zona.append(el("div.u-expediente", el("div.u-exp-cab", "ENVÍO A OTRO LABORATORIO"), el("p", env.desc), el("p.peq", `Viaja refrigerado con ${refri}.`)));
+    const errCapas = await montarEmbalaje(zona, dlg);
+    if (!vivo) return;
+    pasos++;
+    if (errCapas === 0) { puntos += 10; aciertosCaso++; } else puntos += Math.max(0, 10 - errCapas * 3);
+    zona.append(rico(errCapas === 0 ? "✔ Triple embalaje perfecto." :
+      `✘ ${errCapas} error(es). De dentro hacia fuera: **primario → absorbente → secundario → refrigerante → exterior**.`, "peq u-lab-expl"));
+    pasos++;
+    if (await interpretar(zona, dlg, "¿Cómo se clasifica y embala este envío?", OPS_ENVIO, env.ok, env.expl)) { puntos += 10; aciertosCaso++; }
+    if (!vivo) return;
+    pasos++;
+    if (await interpretar(zona, dlg, `Lleva ${refri}. ¿Qué etiqueta de peligro hay que añadir por el refrigerante?`,
+      azar.shuffle(["Mercancías peligrosas diversas", "Gas no inflamable ni tóxico", "Líquido inflamable", "Ninguna"]), etiq, eExpl)) { puntos += 10; aciertosCaso++; }
+    if (!vivo) return;
+    // 4. el tribunal
+    lbl.textContent = "4 · El tribunal";
+    const qs = preguntasDe(["M1_U6", "M5_U8", "M1_U3"], 1);
+    if (qs.length) {
+      await decirGuion(dlg, "lab_tribunal");
+      const ok = await new Promise((res) => {
+        zona.replaceChildren();
+        const b = bloquePregunta(qs[0], { contexto: "unidad", onFin: (bien) => res(bien) });
+        ctl.teclas = (e) => teclasPregunta(b, e);
+        zona.append(el("div.u-expediente.tira", el("div.u-exp-cab", "PREGUNTA DEL TRIBUNAL")), tarjeta("u-exp-cuerpo", b));
+        b.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+      pasos++;
+      if (ok) { puntos += PUNTOS.acierto; aciertosCaso++; }
+    }
+    if (!vivo) return;
+    teclasDialogo(dlg);
+    zona.replaceChildren();
+    esc.classList.remove("compacta");
+    const bien = aciertosCaso >= pasos - 1;
+    U = estado(); U.casos += 1; if (bien) U.resueltas += 1; guardar(U);
+    esc.ponerActores([["duarte", bien ? "sorpresa" : "serio"], ["anna", bien ? "sonrie" : "duda"], ["marco", bien ? "sonrie" : "neutro"]]);
+    await decirGuion(dlg, bien ? "custodia_fin" : "cierre_flojo", esc);
+    await sumar(puntos, dlg);
+    lbl.textContent = "Caso terminado";
+    zona.append(tarjeta(bien ? "bg-ok_bg" : "",
+      el("h2", bien ? "🔗 Prueba admitida" : "🔗 El juez tiene dudas"),
+      el("p", `${aciertosCaso} de ${pasos} aciertos · +${puntos} puntos`),
+      el("p.peq", `El eslabón roto: ${mal + 1}, «${ESLABONES[mal][0]}».`),
+      el("div.fila.envuelve", boton("Otra cadena", () => custodia(k), "primario"),
+        boton("Ver la lección", () => A.abrirLeccion(mal === ESLABONES.length - 1 ? "M5_U8" : mal === 0 ? "M1_U3" : "M1_U6", 0), "secundario"),
         boton("Volver a la sede", () => sede(k), "fantasma"))));
   }
 

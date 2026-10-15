@@ -192,6 +192,28 @@ export const GUION = {
     ["duarte", "sorpresa", "Resultado anulado. El abogado… tendrá que buscar otra excusa."],
     ["marco", "sonrie", "Se lo explico yo al abogado. Me hace ilusión."],
   ],
+  custodia_intro: [
+    ["duarte", "serio", "Una prueba sin cadena de custodia no es una prueba. Es una anécdota."],
+    ["marco", "neutro", "Esta muestra ha pasado por muchas manos. Si una sola falla, el juez la tira a la papelera."],
+    ["duarte", "neutro", "Cada mano que la toca, firma. Cada caja, precintada. Revisa todo, Anna."],
+    ["marco", "sonrie", "El abogado está encantado: dice que nuestra cadena tiene un eslabón suelto. Demuéstrale que se equivoca… o encuéntralo tú antes."],
+  ],
+  custodia_eslabon: [
+    ["valeria", "neutro", "Aquí está el recorrido completo de la muestra. Uno de los eslabones está roto. Señálalo."],
+    ["marco", "neutro", "Lee cada acta con lupa. Firmas, horas, precintos. Todo."],
+  ],
+  custodia_embalaje: [
+    ["iker", "sonrie", "Ahora toca enviar una muestra a otro laboratorio. Triple embalaje. Mi especialidad. Bueno, una de ellas."],
+    ["valeria", "neutro", "Prepara el envío. Capa a capa, de dentro hacia fuera."],
+  ],
+  custodia_capa_mal: [
+    ["iker", "sorpresa", "¡Esa capa va en otro sitio!"],
+    ["valeria", "serio", "No. Piensa de dentro hacia fuera."],
+  ],
+  custodia_fin: [
+    ["duarte", "sorpresa", "Cadena intacta. Prueba admitida. Así se trabaja."],
+    ["marco", "sonrie", "Al abogado se le ha quedado una cara… Ojalá la hubieras visto."],
+  ],
   charla: [
     ["duarte", "neutro", "No me mires así. Las gafas de sol son parte del protocolo."],
     ["valeria", "neutro", "He contado los pasos hasta la máquina de café. Ciento doce. Es ineficiente."],
