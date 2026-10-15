@@ -409,3 +409,13 @@ h3.modulo { margin: 18px 0 6px; font-size: 17px; }
 .u-analitica th { text-align: left; font: 700 11px "Courier New", monospace; color: #6E5A30; border-bottom: 2px solid #B8A574; padding: 4px 6px; }
 .u-analitica td { padding: 6px; border-bottom: 1px dashed #C9B88A; } .u-analitica td.suave { color: #6E5A30; }
 .u-analitica tr.fuera td b { color: #A3123A; } .u-analitica tr.fuera td b::after { content: " *"; }
+/* Unidad · el caso de la muestra */
+.u-tubos { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 8px; }
+.u-tubo { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border: 2px solid var(--borde); border-radius: 12px; background: var(--panel); color: inherit; cursor: pointer; font: inherit; }
+.u-tubo:hover:not(:disabled) { border-color: var(--acento); transform: translateY(-2px); }
+.u-tubo:disabled { opacity: .35; cursor: default; }
+.u-tubo.bien { border-color: var(--ok); }
+.u-tubo-svg { width: 40px; height: 88px; }
+.u-gradilla { display: flex; flex-wrap: wrap; gap: 6px; min-height: 120px; padding: 10px; border-radius: 12px; background: repeating-linear-gradient(90deg, #8C6A43 0 6px, #A07B50 6px 60px); align-items: flex-end; }
+.u-hueco { display: flex; flex-direction: column; align-items: center; color: #FFF7E8; text-shadow: 0 1px 2px #0008; }
+.u-hueco .u-tubo-svg { width: 32px; height: 70px; }

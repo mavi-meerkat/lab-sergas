@@ -170,6 +170,28 @@ export const GUION = {
     ["carmen", "sonrie", "Eso es. Ya puedo firmar el informe."],
     ["duarte", "sorpresa", "La química no miente. Y ahora… tampoco el informe."],
   ],
+  muestra_intro: [
+    ["marco", "serio", "El abogado de la defensa dice que este resultado exculpa a su cliente. A mí me huele raro."],
+    ["duarte", "serio", "Un resultado imposible no es una prueba, Anna. Es una pregunta."],
+    ["valeria", "neutro", "Más del ochenta por ciento de los errores ocurren antes de que la muestra llegue a la máquina. Revisa su viaje."],
+    ["iker", "duda", "Este resultado no me lo creo ni yo. Y eso que yo me lo creo todo."],
+  ],
+  muestra_ruta: [
+    ["valeria", "neutro", "Aquí tienes la hoja de ruta de la muestra. Uno de estos pasos está mal hecho. Señálalo."],
+    ["iker", "neutro", "Desde que pincharon al paciente hasta que llegó aquí. Busca el eslabón débil."],
+  ],
+  muestra_tubos: [
+    ["iker", "sonrie", "Ahora tú. Llena los tubos en el orden correcto. Sin presión. Bueno, con un poco de vacío."],
+    ["valeria", "neutro", "Prueba práctica. Ordena los tubos de extracción como dice el libro."],
+  ],
+  muestra_tubo_mal: [
+    ["iker", "sorpresa", "¡Uy! Ese no tocaba todavía."],
+    ["valeria", "serio", "Ese orden arrastraría aditivos al siguiente tubo."],
+  ],
+  muestra_fin: [
+    ["duarte", "sorpresa", "Resultado anulado. El abogado… tendrá que buscar otra excusa."],
+    ["marco", "sonrie", "Se lo explico yo al abogado. Me hace ilusión."],
+  ],
   charla: [
     ["duarte", "neutro", "No me mires así. Las gafas de sol son parte del protocolo."],
     ["valeria", "neutro", "He contado los pasos hasta la máquina de café. Ciento doce. Es ineficiente."],

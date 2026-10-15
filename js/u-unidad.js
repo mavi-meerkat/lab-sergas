@@ -219,7 +219,7 @@ export function vistaUnidad(main, args = {}, ctlExterno = null) {
       juegoBtn("🧪", "El laboratorio identifica al culpable", "ADN, grupos sanguíneos y microscopía.", () => laboratorio(k)),
       juegoBtn("📌", "El tablero de pruebas", "Une cada prueba con su significado.", () => tablero(k)),
       juegoBtn("🩻", "La mesa de autopsias", "Protocolo, gasometría, bilirrubina y electrolitos.", () => mesa(k)),
-      juegoBtn("🧫", "El caso de la muestra", "¿Dónde falló la preanalítica?", null, true, "Próximamente"),
+      juegoBtn("🧫", "El caso de la muestra", "¿Dónde falló la preanalítica? Tubos, tiempos y temperaturas.", () => muestra(k)),
       juegoBtn("🔗", "Cadena de custodia", "Encuentra el eslabón roto.", null, true, "Próximamente"));
     main.append(juegos);
     teclasDialogo(dlg);
@@ -982,6 +982,223 @@ export function vistaUnidad(main, args = {}, ctlExterno = null) {
       el("h2", bien ? "🩻 Informe firmado" : "🩻 Informe con reparos"),
       el("p", `${aciertosCaso} de ${pasos} aciertos · +${puntos} puntos`),
       el("div.fila.envuelve", boton("Otra autopsia", () => mesa(k), "primario"), boton("Volver a la sede", () => sede(k), "secundario"))));
+  }
+
+  // ================================================================ EL CASO DE LA MUESTRA
+  // Un resultado «imposible» y la hoja de ruta de la muestra: hay que encontrar el error preanalítico
+  // (M1·U3 factores y hemólisis, M1·U4 tubos, extracción y conservación, M1·U6 transporte y recepción).
+  // Después, el orden de llenado de los tubos y una pregunta del tribunal.
+  const R = (t, mal = false) => [t, mal];
+  const MUESTRAS = [
+    { tit: "BIOQUÍMICA URGENTE", filas: [["Potasio", "8,9 mEq/L", "3,5-5 mEq/L", true], ["Calcio", "2,1 mg/dL", "8,5-10,5 mg/dL", true], ["Sodio", "141 mEq/L", "135-148 mEq/L", false]],
+      nota: "El paciente está consciente, sin síntomas y con un ECG normal.",
+      ruta: [R("Bioquímica recogida en el tubo de tapón lila (EDTA-K)", true), R("Extracción a las 8:10; llegada al laboratorio a las 9:00"), R("Alcohol de 70 % dejado secar antes de pinchar"), R("Tubos transportados en vertical, con el tapón arriba")],
+      porque: "El tapón **lila lleva EDTA-K**: aporta **potasio** y **fija el calcio**. Por eso sale un potasio altísimo y un calcio bajísimo en un paciente sin síntomas. La bioquímica va en tubo **seco (rojo) o con gel (amarillo)**.",
+      q2: ["¿Qué tubo había que usar para esta bioquímica?", ["Tapón rojo o amarillo (suero)", "Tapón lila (EDTA)", "Tapón azul celeste (citrato)", "Tapón negro (VSG)"], "Tapón rojo o amarillo (suero)",
+        "El suero se obtiene en tubo **seco (rojo)** o con **gel separador (amarillo)**: bioquímica y serología. El lila es para **hematología**."] },
+    { tit: "BIOQUÍMICA", filas: [["Potasio", "6,8 mEq/L", "3,5-5 mEq/L", true], ["LDH", "780 U/L", "< 250 U/L", true], ["Haptoglobina", "Disminuida", "", true]],
+      nota: "Observación del laboratorio: suero de color rojizo.",
+      ruta: [R("Se pinchó sin dejar secar el alcohol, con aguja muy fina y la sangre entrando a goteo", true), R("Tubo seco que reposó 10 minutos antes de centrifugar"), R("Ayuno de 10 horas comprobado antes de la extracción"), R("Volante y etiqueta con los mismos datos")],
+      porque: "Alcohol húmedo, aguja fina y sangre a goteo producen **hemólisis**: al romperse los hematíes salen **potasio** y **LDH**, y la **haptoglobina** se gasta y baja. El suero rojizo lo delata.",
+      q2: ["En una muestra hemolizada, ¿qué valor BAJA?", ["Haptoglobina", "Potasio", "LDH", "Fósforo"], "Haptoglobina",
+        "Suben los que están **dentro del hematíe** (potasio, LDH, fósforo). **Baja la haptoglobina**, que se consume al capturar la hemoglobina libre."] },
+    { tit: "BIOQUÍMICA", filas: [["Potasio", "6,1 mEq/L", "3,5-5 mEq/L", true], ["Proteínas totales", "8,9 g/dL", "6-8 g/dL", true], ["Glucosa", "92 mg/dL", "70-110 mg/dL", false]],
+      nota: "La enfermera anota: «venas difíciles, se tardó en encontrarla».",
+      ruta: [R("Compresor colocado durante 5 minutos mientras se buscaba la vena", true), R("Compresor a 8 cm por encima del punto de punción"), R("Vena cubital media, bisel hacia arriba"), R("Tubos llenados hasta agotar el vacío")],
+      porque: "El compresor debe estar **2 minutos como máximo**. Si se alarga, la sangre se concentra y sale potasio de las células: **falsos aumentos**. Se va a 7,5-10 cm por encima; eso estaba bien.",
+      q2: ["¿Qué se hace con esta muestra?", ["Registrar la incidencia y repetir la extracción", "Corregir el potasio con una fórmula", "Darla por buena y avisar al médico", "Congelarla y analizarla mañana"], "Registrar la incidencia y repetir la extracción",
+        "Una muestra con un error preanalítico no se «arregla»: **se registra la incidencia** y se **repite la extracción** en condiciones."] },
+    { tit: "MICROBIOLOGÍA · HEMOCULTIVOS", filas: [["Frasco aerobio", "Sin crecimiento a los 5 días", "", false], ["Frasco anaerobio", "Sin crecimiento a los 5 días", "", false]],
+      nota: "El paciente tenía 39,5 °C y escalofríos en el momento de la extracción.",
+      ruta: [R("Frascos guardados en la nevera a 4 °C toda la noche, hasta el envío", true), R("Dos extracciones de venas distintas, separadas más de 1 hora"), R("Tapón de cada frasco desinfectado antes de inocular"), R("Sangre extraída antes de empezar el antibiótico")],
+      porque: "Los hemocultivos **NUNCA van a la nevera**: se conservan a **35-37 °C o a temperatura ambiente**. El frío mata a las bacterias delicadas y da un **falso negativo**.",
+      q2: ["¿Cómo se conservan los hemocultivos hasta llegar al laboratorio?", ["A 35-37 °C o a temperatura ambiente", "En nevera a 2-8 °C", "Congelados a −20 °C", "En hielo hasta 24 h"], "A 35-37 °C o a temperatura ambiente",
+        "**Hemocultivos: 35-37 °C o ambiente, nunca nevera ni congelador.** Si una opción dice refrigerar, es falsa."] },
+    { tit: "COAGULACIÓN", filas: [["Tiempo de protrombina", "38 s", "11-14 s", true], ["TTPa", "92 s", "25-35 s", true]],
+      nota: "El paciente no toma anticoagulantes y no sangra.",
+      ruta: [R("Orden de llenado: lila (EDTA) → azul celeste (citrato) → rojo (seco)", true), R("Tubo de citrato invertido suavemente 3-4 veces"), R("Llegada al laboratorio en menos de 2 horas"), R("Paciente identificado antes de etiquetar los tubos")],
+      porque: "El **citrato va antes que los tubos con otros anticoagulantes**: si el EDTA se arrastra al tubo de coagulación, alarga los tiempos sin que el paciente tenga nada. Orden del libro: **hemocultivo → seco → citrato → VSG → EDTA → otros**.",
+      q2: ["¿Cuál es el orden de llenado según el libro?", ["Hemocultivo → seco → citrato → EDTA", "EDTA → citrato → seco → hemocultivo", "Seco → EDTA → citrato → hemocultivo", "Citrato → hemocultivo → EDTA → seco"], "Hemocultivo → seco → citrato → EDTA",
+        "Siempre se empieza por los **hemocultivos** (para no contaminarlos); después **seco**, **citrato** (coagulación y VSG), **EDTA** y otros aditivos."], mezclar: false },
+    { tit: "GASOMETRÍA ARTERIAL", filas: [["pO₂", "148 mmHg", "80-100 mmHg", true], ["pCO₂", "31 mmHg", "35-45 mmHg", true], ["pH", "7,46", "7,35-7,45", true]],
+      nota: "El paciente respira aire ambiente y tiene una EPOC grave.",
+      ruta: [R("Burbuja de aire en la jeringa; se cerró doblando la aguja", true), R("Heparina sódica como anticoagulante"), R("Test de Allen positivo antes de pinchar la radial"), R("Paciente en reposo 20-30 minutos antes")],
+      porque: "Las **burbujas** alteran los gases (el aire sube la pO₂): hay que **expulsarlas antes de 20 segundos** y **cerrar con tapón**. Doblar la aguja **no cierra**.",
+      q2: ["¿Qué hay que hacer con las burbujas de una gasometría?", ["Expulsarlas antes de 20 segundos y tapar", "Dejarlas: no alteran nada", "Agitar fuerte para disolverlas", "Doblar la aguja para que no entren más"], "Expulsarlas antes de 20 segundos y tapar",
+        "Burbujas fuera **antes de 20 s** y tapón. La muestra, en **agua con hielo** o analizada **antes de 15 minutos**."] },
+    { tit: "UROCULTIVO Y SISTEMÁTICO", filas: [["Bacterias", "> 100 000 UFC/ml", "", true], ["pH", "8,5", "4,5-7,5", true], ["Cilindros", "No se observan", "", false]],
+      nota: "La paciente no tiene ningún síntoma urinario.",
+      ruta: [R("Muestra en la mesa del control 6 horas, a temperatura ambiente", true), R("Micción media, con higiene previa"), R("Frasco estéril bien cerrado y etiquetado"), R("Primera orina de la mañana")],
+      porque: "Si la orina no llega **antes de 2 horas**, se **refrigera a 2-8 °C**. A temperatura ambiente las bacterias se multiplican y **alcalinizan**, y los **cilindros se deshacen**.",
+      q2: ["Si la orina para urocultivo no puede llegar antes de 2 horas…", ["Se refrigera a 4 °C y es útil hasta 24 h", "Se deja a temperatura ambiente", "Se mete en la estufa a 37 °C", "Se le añade formol"], "Se refrigera a 4 °C y es útil hasta 24 h",
+        "Urocultivo: al laboratorio **antes de 2 h**; si no, **a 4 °C**, útil **hasta 24 h**."] },
+    { tit: "PARÁSITOS EN HECES", filas: [["Examen directo", "Negativo", "", false], ["Concentración", "Negativo", "", false]],
+      nota: "Viajó a la selva hace un mes y tiene diarrea desde entonces.",
+      ruta: [R("Las tres muestras se guardaron en la nevera de casa hasta entregarlas", true), R("Tres muestras recogidas en días sucesivos"), R("Heces sin orina ni papel higiénico"), R("Recogidas antes de empezar la medicación")],
+      porque: "Las heces para **parásitos** van a **temperatura ambiente o algo frescas; nunca nevera ni estufa**. Si hay retraso: 1 parte de heces + 3 de **formol al 5-10 %**.",
+      q2: ["¿Qué muestra SÍ se conserva en nevera?", ["Orina de 24 horas", "Hemocultivo", "Heces para parásitos", "Semen"], "Orina de 24 horas",
+        "Regla del profesor: **si buscamos algo vivo y delicado, nada de frío**. Nevera: orina (más de 2 h), orina de 24 h y heces para bioquímica."] },
+    { tit: "SEMINOGRAMA", filas: [["Volumen", "1,2 ml", "", false], ["Concentración", "9 millones/ml", "> 15 millones/ml", true]],
+      nota: "Estudio de fertilidad. El resultado se usa como prueba en un juicio de paternidad.",
+      ruta: [R("Abstinencia sexual de 1 día antes de la recogida", true), R("Recogida por masturbación en frasco estéril"), R("Entregado a los 30 minutos, a temperatura corporal"), R("Toda la eyaculación recogida")],
+      porque: "La abstinencia debe ser de **3 a 5 días**; con **menos de 48 horas la muestra no es válida**. El resultado no sirve como prueba.",
+      q2: ["¿Cómo se transporta una muestra de semen?", ["Antes de 30 min (máximo 60), a temperatura corporal", "En nevera, hasta 24 h", "Congelada a −20 °C", "En formol al 10 %"], "Antes de 30 min (máximo 60), a temperatura corporal",
+        "Semen: **antes de 30 minutos (máximo 60)** y a **temperatura corporal**. Nunca frío."] },
+    { tit: "BANCO DE SANGRE", filas: [["Grupo ABO", "A", "", false], ["Rh", "Negativo", "", false], ["Grupo en el historial", "0 Rh+", "", true]],
+      nota: "El grupo no coincide con el de su historial de hace un año.",
+      ruta: [R("El nombre de la etiqueta del tubo no coincide con el del volante", true), R("Tubo de tapón lila, bien invertido"), R("Muestra entregada en mano en 40 minutos"), R("Extracción sin hemólisis")],
+      porque: "Si **etiqueta y volante no coinciden**, la muestra **se rechaza**. El peor error preanalítico: **atribuir el resultado a otra persona**.",
+      q2: ["¿Cuál de estos es un criterio de rechazo de una muestra?", ["La etiqueta y el volante no coinciden", "Llegar en 1 hora", "Venir en triple embalaje", "Llevar el conservante anotado en la etiqueta"], "La etiqueta y el volante no coinciden",
+        "Se rechaza sin etiqueta o volante, si **no coinciden**, si falta información, si se pasó el **tiempo**, con envase inadecuado, derrames, **hisopos secos** o **cantidad insuficiente**. **Toda incidencia se registra.**"] },
+    { tit: "ANATOMÍA PATOLÓGICA", filas: [["Biopsia de colon", "No recibida: contenedor roto", "", true]],
+      nota: "El laboratorio de anatomía patológica avisa de un derrame en la estación del tubo neumático.",
+      ruta: [R("Biopsia en formol enviada por el tubo neumático", true), R("Formol al 10 %, unas 20 veces el volumen del tejido"), R("Recipiente etiquetado con el riesgo biológico señalado"), R("Fijación inmediata tras la extracción")],
+      porque: "El **tubo neumático está prohibido** para muestras en **formol** y de **nivel 4 de seguridad**. Esa biopsia tenía que ir en mano o con embalaje secundario.",
+      q2: ["¿Qué muestras NO pueden ir por el tubo neumático?", ["Las que van en formol y las de nivel 4", "Las de orina", "Todos los tubos de sangre", "Las que van refrigeradas"], "Las que van en formol y las de nivel 4",
+        "Tubo neumático: contenedores de unos 10 cm a prueba de fugas; **prohibido** con **formol** y **nivel 4**."] },
+    { tit: "GLUCOSA", filas: [["Glucosa", "41 mg/dL", "70-110 mg/dL", true]],
+      nota: "Paciente no diabético, consciente y sin ningún síntoma de hipoglucemia.",
+      ruta: [R("Tubo seco sin centrifugar, 5 horas en la mesa antes de enviarlo", true), R("Ayuno de 8 horas"), R("Paciente identificado y tubos etiquetados antes de pinchar"), R("Venopunción sin incidencias en la cubital media")],
+      porque: "La sangre debe llegar en **2 horas como máximo**. Si se va a retrasar, se deja coagular y se **centrifuga**; mientras, las células siguen **consumiendo glucosa**. Para glucosa existe el tubo **gris (fluoruro + oxalato)**.",
+      q2: ["¿Qué tubo se usa para la glucosa y el ácido láctico?", ["Gris (fluoruro sódico + oxalato potásico)", "Lila (EDTA)", "Negro (citrato)", "Verde (heparina)"], "Gris (fluoruro sódico + oxalato potásico)",
+        "**Gris → Glucosa** (las dos con G): fluoruro sódico y oxalato potásico."] },
+  ];
+  // lección a la que remite cada caso (por defecto, M1_U4)
+  MUESTRAS[1].lid = "M1_U3"; MUESTRAS[9].lid = "M1_U6"; MUESTRAS[10].lid = "M1_U6";
+
+  const TUBOS = [
+    { n: 1, nombre: "Hemocultivo", tapon: "#2F6FD0", frasco: true, extra: "frasco" },
+    { n: 2, nombre: "Seco", tapon: "#D23A3A", extra: "suero" },
+    { n: 3, nombre: "Citrato", tapon: "#8FD3F2", extra: "coagulación" },
+    { n: 4, nombre: "VSG", tapon: "#222", extra: "citrato" },
+    { n: 5, nombre: "EDTA", tapon: "#9B6BC8", extra: "hemograma" },
+    { n: 6, nombre: "Heparina", tapon: "#3E9A5A", extra: "otros" },
+    { n: 6, nombre: "Fluoruro", tapon: "#9AA0A6", extra: "glucosa" },
+  ];
+  function dibujoTubo(t) {
+    if (t.frasco) return `<svg viewBox="0 0 50 110" class="u-tubo-svg"><rect x="17" y="4" width="16" height="12" rx="2" fill="${t.tapon}"/>
+      <path d="M19 16 h12 v10 q14 6 14 22 v50 q0 8 -8 8 h-24 q-8 0 -8 -8 v-50 q0 -16 14 -22z" fill="#EEF3F8" stroke="#7A8594" stroke-width="2"/>
+      <rect x="9" y="62" width="32" height="34" rx="3" fill="#E7C98A" opacity=".8"/></svg>`;
+    return `<svg viewBox="0 0 50 110" class="u-tubo-svg"><rect x="13" y="4" width="24" height="16" rx="3" fill="${t.tapon}" stroke="#333" stroke-width="1"/>
+      <path d="M15 20 h20 v76 q0 10 -10 10 q-10 0 -10 -10z" fill="#F4F7FA" stroke="#7A8594" stroke-width="2"/>
+      <rect x="16" y="44" width="18" height="30" fill="#fff" stroke="#bbb"/><path d="M16 80 h18 v16 q0 8 -9 8 q-9 0 -9 -8z" fill="#9E1B26" opacity=".85"/></svg>`;
+  }
+  /** Minijuego: tocar los tubos en orden de llenado. Devuelve el número de errores. */
+  function ordenTubos(zona, dlg) {
+    return new Promise((res) => {
+      const otros = elegirUna(TUBOS.filter((t) => t.n === 6));
+      let lista = TUBOS.filter((t) => t.n < 6);
+      lista = azar.shuffle(lista).slice(0, 4).concat([otros]).sort((a, b) => a.n - b.n);
+      const orden = lista.map((t) => t.n);
+      let pos = 0, errores = 0;
+      const gradilla = el("div.u-gradilla");
+      const fila = el("div.u-tubos");
+      const pintar = azar.shuffle([...lista]);
+      pintar.forEach((t) => {
+        const b = el("button.u-tubo", { type: "button", "aria-label": `${t.nombre} (${t.extra})` },
+          el("div", { html: dibujoTubo(t) }), el("b.peq", t.nombre), el("span.peq.suave", t.extra));
+        b.onclick = () => {
+          if (b.disabled) return;
+          if (t.n === orden[pos]) {
+            b.disabled = true; b.classList.add("bien");
+            gradilla.append(el("div.u-hueco", el("span.peq", `${pos + 1}.º`), el("div", { html: dibujoTubo(t) }), el("span.peq", t.nombre)));
+            pos++;
+            if (pos >= orden.length) { ctl.teclas = (e) => ((e.key === "Enter" || e.key === " ") && (dlg.avanzar(), true)); res(errores); }
+          } else {
+            errores++; b.classList.add("temblar");
+            setTimeout(() => b.classList.remove("temblar"), 600);
+            decirGuion(dlg, "muestra_tubo_mal");
+          }
+        };
+        fila.append(b);
+      });
+      zona.append(el("div.u-lab-pregunta", el("b", "Toca los tubos en el orden de llenado"), el("p.peq.suave", "Como en la venopunción: el primero que llenas, el primero que tocas.")), fila,
+        el("div.u-lab-pregunta", el("b.peq", "Gradilla")), gradilla);
+      ctl.teclas = (e) => {
+        if (/^[1-9]$/.test(e.key) && fila.children[Number(e.key) - 1]) { fila.children[Number(e.key) - 1].click(); return true; }
+        if (e.key === "Enter" || e.key === " ") { dlg.avanzar(); return true; }
+        return false;
+      };
+    });
+  }
+
+  async function muestra(k) {
+    callar();
+    const s = SEDES[k];
+    const caso = numeroCaso();
+    let puntos = 0, aciertosCaso = 0, pasos = 0;
+    main.replaceChildren();
+    const esc = escena(ESCENAS.laboratorio(s.tinte), [["marco", "serio"], ["anna", "neutro"], ["valeria", "neutro"]]);
+    const dlg = dialogo();
+    const zona = el("div.u-zona");
+    const lbl = el("span.suave.peq");
+    main.append(el("div.fila.entre", el("div.fila", boton("← Sede", () => sede(k), "fantasma"), el("h2", `🧫 Caso #${caso}`)), lbl), esc, dlg, zona);
+    teclasDialogo(dlg);
+    await decirGuion(dlg, "muestra_intro", esc);
+    if (!vivo) return;
+    esc.classList.add("compacta");
+    const m = elegirUna(MUESTRAS);
+    // 1. el resultado imposible y la hoja de ruta
+    lbl.textContent = "1 · La hoja de ruta";
+    zona.replaceChildren(informe(`CASO #${caso} · ${m.tit}`, m.filas, [m.nota]));
+    await decirGuion(dlg, "muestra_ruta");
+    if (!vivo) return;
+    const ruta = m.ruta.map(([t]) => t);
+    const fallo = m.ruta.find(([, mal]) => mal)[0];
+    pasos++;
+    if (await interpretar(zona, dlg, "¿Qué paso de la hoja de ruta explica el resultado?", azar.shuffle(ruta), fallo, m.porque)) { puntos += 15; aciertosCaso++; }
+    if (!vivo) return;
+    // 2. la consecuencia
+    lbl.textContent = "2 · La consecuencia";
+    const [t2, o2, k2, e2] = m.q2;
+    pasos++;
+    if (await interpretar(zona, dlg, t2, m.mezclar === false ? o2 : azar.shuffle([...o2]), k2, e2)) { puntos += 10; aciertosCaso++; }
+    if (!vivo) return;
+    // 3. orden de llenado
+    lbl.textContent = "3 · Los tubos";
+    zona.replaceChildren();
+    await decirGuion(dlg, "muestra_tubos");
+    if (!vivo) return;
+    const err = await ordenTubos(zona, dlg);
+    if (!vivo) return;
+    pasos++;
+    if (err === 0) { puntos += 10; aciertosCaso++; } else puntos += Math.max(0, 10 - err * 3);
+    zona.append(rico(err === 0 ? "✔ Orden perfecto: **hemocultivo → seco → citrato → VSG → EDTA → otros aditivos**." :
+      `✘ ${err} error(es). El orden del libro: **hemocultivo → seco → citrato (coagulación) → VSG → EDTA → otros (heparina, fluoruro)**. El citrato va antes que los demás anticoagulantes.`, "peq u-lab-expl"));
+    await decirGuion(dlg, err === 0 ? "lab_bien" : "lab_mal");
+    if (!vivo) return;
+    // 4. el tribunal
+    lbl.textContent = "4 · El tribunal";
+    const qs = preguntasDe(["M1_U3", "M1_U4", "M1_U6"], 1);
+    if (qs.length) {
+      await decirGuion(dlg, "lab_tribunal");
+      const ok = await new Promise((res) => {
+        zona.replaceChildren();
+        const b = bloquePregunta(qs[0], { contexto: "unidad", onFin: (bien) => res(bien) });
+        ctl.teclas = (e) => teclasPregunta(b, e);
+        zona.append(el("div.u-expediente.tira", el("div.u-exp-cab", "PREGUNTA DEL TRIBUNAL")), tarjeta("u-exp-cuerpo", b));
+        b.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+      pasos++;
+      if (ok) { puntos += PUNTOS.acierto; aciertosCaso++; }
+    }
+    if (!vivo) return;
+    teclasDialogo(dlg);
+    zona.replaceChildren();
+    esc.classList.remove("compacta");
+    const bien = aciertosCaso >= pasos - 1;
+    U = estado(); U.casos += 1; if (bien) U.resueltas += 1; guardar(U);
+    esc.ponerActores([["duarte", bien ? "sorpresa" : "serio"], ["anna", bien ? "sonrie" : "duda"], ["marco", bien ? "sonrie" : "neutro"]]);
+    await decirGuion(dlg, bien ? "muestra_fin" : "cierre_flojo", esc);
+    await sumar(puntos, dlg);
+    lbl.textContent = "Caso terminado";
+    zona.append(tarjeta(bien ? "bg-ok_bg" : "",
+      el("h2", bien ? "🧫 Resultado anulado" : "🧫 La defensa se sale con la suya"),
+      el("p", `${aciertosCaso} de ${pasos} aciertos · +${puntos} puntos`),
+      el("p.peq", `El fallo: ${fallo}.`),
+      el("div.fila.envuelve", boton("Otra muestra", () => muestra(k), "primario"),
+        boton("Ver la lección", () => A.abrirLeccion(m.lid || "M1_U4", 0), "secundario"),
+        boton("Volver a la sede", () => sede(k), "fantasma"))));
   }
 
   // ---------------------------------------------------------------- arranque
