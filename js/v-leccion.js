@@ -3,6 +3,29 @@ import { A, TIPOS_TARJETA } from "./ctx.js";
 import { el, boton, tarjeta, rico, barra, segmentado, aviso } from "./ui.js";
 import { bloquePregunta, verRecorte, teclasPregunta } from "./pregunta.js";
 import { esc, md, mdInline } from "./util.js";
+import { busto, EQUIPO } from "./u-arte.js";
+import { claveFrase } from "./u-voz.js";
+import { velocidad } from "./velocidades.js";
+import { narradorDe, TIPOS_PJ, CASOS, CIERRES, ENTRADAS, casoDe, NOMBRE_JUEGO } from "./l-guion.js";
+
+// Audios de los personajes disponibles (audio/p/indice.json). Si falta uno, suena el del profesor.
+let indiceP = null;
+function cargarIndiceP() {
+  if (!indiceP) indiceP = fetch("audio/p/indice.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : [])).catch(() => []).then((l) => new Set(l));
+  return indiceP;
+}
+/** Suma puntos al rango de la Unidad de Análisis (estudiar también cuenta). */
+function sumarUnidad(n) {
+  const u = { puntos: 0, ...(A.p.get("unidad", null) || {}) };
+  u.puntos = (u.puntos || 0) + n;
+  A.p.set("unidad", u);
+}
+export const modoPersonajes = () => A.p.get("modo_personajes", true) !== false;
+/** Mini cabecera de personaje: busto pequeño + nombre (+ frase). */
+function quienHabla(q, frase = null, clase = "") {
+  return el("div.l-quien" + clase, el("div.l-quien-foto", { html: busto(EQUIPO[q], "neutro") }),
+    el("div.l-quien-txt", el("b", EQUIPO[q].nombre), frase ? el("div.l-quien-frase", "«" + frase + "»") : null));
+}
 
 export function audioUrl(hash) { return `audio/${hash}.ogg`; }
 
@@ -18,6 +41,8 @@ export function vistaLeccion(main, { lid, inicio = null }) {
   let i = guardada.completada ? 0 : Math.min(guardada.tarjeta, tarjetas.length - 1);
   if (inicio !== null) i = Math.max(0, Math.min(inicio, tarjetas.length - 1));
   const resueltas = new Set();
+  const puntuadas = new Set();
+  let puntosLeccion = 0;
   let bloqueActual = null;
 
   // ---------------- audio (modo clase)
@@ -25,6 +50,11 @@ export function vistaLeccion(main, { lid, inicio = null }) {
   audio.preload = "auto";
   let clase = false, sonando = null, pausado = null, timerAvance = null;
   let vel = Number(p.get("clase_vel", 1.25));
+  const pj = modoPersonajes();
+  const narra = narradorDe(lid);
+  const entradaDe = (t, k) => { const q = (TIPOS_PJ[t.tipo] || [])[1]; return q && ENTRADAS[q] ? [q, ENTRADAS[q][k % ENTRADAS[q].length]] : null; };
+  let cola = [];              // audios encadenados (entrada del personaje, caso del día…) antes del principal
+  if (pj) cargarIndiceP();
 
   // ---------------- cabecera
   const lblN = el("span.suave.peq");
@@ -33,7 +63,7 @@ export function vistaLeccion(main, { lid, inicio = null }) {
   main.append(el("div.cab-leccion",
     boton("← Ruta", () => A.ir("profesor"), "fantasma"),
     el("div.flex1",
-      el("div.suave.peq", `Módulo ${u.modulo} · ${mod.titulo}  ·  Unidad ${u.numero}`),
+      el("div.suave.peq", pj ? `EXPEDIENTE ${lid} · Módulo ${u.modulo} · ${mod.titulo}  ·  Te lo explica: ${EQUIPO[narra].nombre}` : `Módulo ${u.modulo} · ${mod.titulo}  ·  Unidad ${u.numero}`),
       el("h2", lec.titulo || u.titulo)),
     el("div.fila.envuelve.derecha", bClase, boton("📄 Resumen PDF", () => imprimirResumen(lid), "secundario"), lblN)));
   const barraProg = el("div.barra-cont");
@@ -43,8 +73,8 @@ export function vistaLeccion(main, { lid, inicio = null }) {
   const lblClase = el("span.suave.peq.flex1");
   const barraClase = el("div.barra-clase.oculto",
     bPP, el("b.c-azul", "🎧 Modo clase"), lblClase,
-    el("span.suave.peq", "Velocidad"),
-    segmentado(["1×", "1,25×", "1,5×"], { 1: "1×", 1.25: "1,25×", 1.5: "1,5×" }[vel] || "1×", (v) => {
+    pj ? el("span.suave.peq", "Velocidad de cada personaje: en Ajustes") : el("span.suave.peq", "Velocidad"),
+    pj ? null : segmentado(["1×", "1,25×", "1,5×"], { 1: "1×", 1.25: "1,25×", 1.5: "1,5×" }[vel] || "1×", (v) => {
       vel = { "1×": 1, "1,25×": 1.25, "1,5×": 1.5 }[v];
       p.set("clase_vel", vel);
       audio.playbackRate = vel;
@@ -81,6 +111,10 @@ export function vistaLeccion(main, { lid, inicio = null }) {
     bSig.disabled = false;
     bSig.textContent = i === n - 1 ? "Terminar lección ✓" : "Siguiente →";
     lblAviso.textContent = "";
+    if (i === 0 && pj && CASOS[lid]) {
+      zona.append(tarjeta("l-caso", el("div.l-caso-cab", "CASO DEL DÍA"), quienHabla(narra, CASOS[lid], ".grande"),
+        boton("▶ Escuchar", () => decirSuelto(narra, CASOS[lid]), "fantasma peq")));
+    }
     if (i === 0 && lec.objetivos && lec.objetivos.length) {
       zona.append(tarjeta("bg-panel2", el("div.c-acento.negrita.peq", "En esta lección vas a aprender"),
         rico(lec.objetivos.map((o) => "- " + o).join("\n"))));
@@ -93,11 +127,16 @@ export function vistaLeccion(main, { lid, inicio = null }) {
 
   function pintarTarjeta(t) {
     const tipo = t.tipo;
-    const [nombre, col, bg] = TIPOS_TARJETA[tipo] || [tipo.toUpperCase(), "acento", "panel"];
+    const [nombre0, col, bg] = TIPOS_TARJETA[tipo] || [tipo.toUpperCase(), "acento", "panel"];
+    const nombre = pj && TIPOS_PJ[tipo] ? TIPOS_PJ[tipo][0] : nombre0;
     const caja = tarjeta("tarjeta-leccion" + (bg !== "panel" ? " bg-" + bg : ""));
     caja.append(el("div.tipo-tarjeta.c-" + col, nombre));
+    if (pj) {
+      const ent = entradaDe(t, orig[i]);
+      caja.append(quienHabla(ent ? ent[0] : narra, ent ? ent[1] : null));
+    }
     if (t.titulo) caja.append(el("h2.titulo-tarjeta", t.titulo));
-    if (t.texto) caja.append(rico(t.texto, "grande"));
+    if (t.texto) caja.append(rico(pj ? t.texto.replace(/_?Regla del profesor/g, "_Truco de Pipeta").replace(/del profesor/g, "de Pipeta") : t.texto, "grande"));
     if (tipo === "esquema") caja.append(esquema(t));
     if (tipo === "tabla" || t.tabla) caja.append(tabla(t.tabla || t));
     if (tipo === "ejercicio") caja.append(ejercicio(t));
@@ -108,7 +147,10 @@ export function vistaLeccion(main, { lid, inicio = null }) {
         bloqueActual = bloquePregunta(qid, {
           contexto: "profesor",
           onFin: () => { resueltas.add(idx); if (idx === i) sig(); },
-          onRespuesta: () => { if (clase) sonar(`${orig[i]}_tras`); },
+          onRespuesta: (correcta) => {
+            if (correcta && !puntuadas.has(idx)) { puntuadas.add(idx); puntosLeccion += 5; sumarUnidad(5); }
+            if (clase) sonar(`${orig[i]}_tras`);
+          },
         });
         caja.append(bloqueActual);
       } else resueltas.add(i);
@@ -168,17 +210,29 @@ export function vistaLeccion(main, { lid, inicio = null }) {
   }
 
   function final() {
+    const eraClase = clase;
     if (clase) claseParar();
     p.guardarLeccion(lid, 0, true);
+    // +20 al rango de la Unidad por cerrar el expediente (una vez al día por lección)
+    const hoy = new Date().toISOString().slice(0, 10), reg = { ...(p.get("lec_puntos", {}) || {}) };
+    let extra = 0;
+    if (reg[lid] !== hoy) { reg[lid] = hoy; p.set("lec_puntos", reg); extra = 20; sumarUnidad(20); }
     zona.replaceChildren();
     const hechas = p.leccionesCompletadas();
     const sigU = c.ruta().find((x) => x.id in c.lecciones && !hechas.has(x.id));
+    if (pj) {
+      const frase = CIERRES[narra][Math.floor(Math.random() * CIERRES[narra].length)];
+      zona.append(tarjeta("l-caso", el("div.l-caso-cab", "EXPEDIENTE CERRADO"), quienHabla(narra, frase, ".grande")));
+      if (eraClase) decirSuelto(narra, frase);
+    }
     zona.append(tarjeta("bg-ok_bg",
-      el("h2.c-ok", "🎉  Lección completada"),
+      el("h2.c-ok", pj ? "📁  Expediente cerrado" : "🎉  Lección completada"),
       el("p", "Las preguntas de comprobación ya están en tu repetición espaciada: el algoritmo te las volverá a traer justo antes de que se te olviden."),
+      extra + puntosLeccion ? el("p.negrita", `🎖️ +${extra + puntosLeccion} puntos para tu rango en la Unidad de Análisis`) : null,
       lec.resumen ? rico("**Para llevarte:**\n" + lec.resumen.map((x) => "- " + x).join("\n")) : null,
       el("div.fila.envuelve",
-        sigU ? boton(`Siguiente: ${sigU.titulo.slice(0, 50)} →`, () => A.abrirLeccion(sigU.id), "primario") : null,
+        boton(`🔎 Ir al caso: ${NOMBRE_JUEGO[casoDe(lid).juego]}`, () => A.ir("unidad", casoDe(lid)), "primario"),
+        sigU ? boton(`Siguiente: ${sigU.titulo.slice(0, 50)} →`, () => A.abrirLeccion(sigU.id), "secundario") : null,
         boton("Volver al inicio", () => A.ir("inicio"), "secundario"),
         boton("📄 Resumen PDF", () => imprimirResumen(lid), "secundario"))));
     bSig.disabled = true;
@@ -194,11 +248,31 @@ export function vistaLeccion(main, { lid, inicio = null }) {
     barraClase.classList.remove("oculto");
     sonar(String(orig[i]));
   }
-  function sonar(clave) {
+  async function sonar(clave) {
     if (!clase) return;
     clearTimeout(timerAvance);
     const hash = guion && guion.a[clave];
     sonando = null;
+    cola = [];
+    if (pj && guion && guion.b && guion.b[clave]) {
+      const idx = await cargarIndiceP();
+      if (!clase) return;
+      const [q, hp] = guion.b[clave];
+      if (idx.has(hp)) {
+        const pre = [];
+        if (!clave.includes("_")) {
+          if (i === 0 && CASOS[lid]) pre.push([narra, CASOS[lid]]);
+          const ent = entradaDe(tarjetas[i], orig[i]);
+          if (ent) pre.push(ent);
+        }
+        for (const [qq, txt] of pre) {
+          const k = await claveFrase(qq, txt);
+          if (idx.has(k)) cola.push({ src: `audio/p/${k}.ogg`, rate: velocidad(qq) });
+        }
+        cola.push({ src: `audio/p/${hp}.ogg`, rate: velocidad(q), principal: true });
+        return reproducirCola(clave);
+      }
+    }
     if (!hash) {
       audio.pause();
       lblClase.textContent = "Esta tarjeta no tiene explicación en audio";
@@ -218,7 +292,31 @@ export function vistaLeccion(main, { lid, inicio = null }) {
     });
     sonando = clave;
   }
+  function reproducirCola(clave) {
+    const sig = cola.shift();
+    if (!sig) return;
+    audio.src = sig.src;
+    audio.playbackRate = sig.rate;
+    sonando = clave;
+    audio.play().then(() => {
+      bPP.textContent = "⏸";
+      lblClase.textContent = clave.includes("_") ? "Comentando la respuesta…" : `Explicando la tarjeta ${i + 1} de ${tarjetas.length}`;
+    }).catch(() => {
+      lblClase.textContent = navigator.onLine ? "No se pudo reproducir este audio" : "Sin conexión: este audio no está descargado";
+    });
+  }
+  /** Frase suelta de un personaje (botón Escuchar, cierre). */
+  async function decirSuelto(q, txt) {
+    const idx = await cargarIndiceP();
+    const k = await claveFrase(q, txt);
+    if (!idx.has(k)) return;
+    if (clase) return;
+    audio.src = `audio/p/${k}.ogg`;
+    audio.playbackRate = velocidad(q);
+    audio.play().catch(() => {});
+  }
   audio.addEventListener("ended", () => {
+    if (clase && sonando && cola.length) { reproducirCola(sonando); return; }
     if (!clase || !sonando) return;
     const clave = sonando;
     sonando = null;

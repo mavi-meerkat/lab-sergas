@@ -1465,7 +1465,9 @@ export function vistaUnidad(main, args = {}, ctlExterno = null) {
   }
 
   // ---------------------------------------------------------------- arranque
-  if (args.sede && SEDES[args.sede]) sede(args.sede);
+  const JUEGOS = { muestra, custodia, mesa, laboratorio, tablero, interrogatorio };
+  if (args.sede && SEDES[args.sede] && JUEGOS[args.juego]) JUEGOS[args.juego](args.sede);
+  else if (args.sede && SEDES[args.sede]) sede(args.sede);
   else portada();
   return ctl;
 }

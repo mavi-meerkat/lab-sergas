@@ -442,3 +442,19 @@ h3.modulo { margin: 18px 0 6px; font-size: 17px; }
 .u-velocidades { display: grid; gap: 6px; margin-top: 8px; }
 .u-vel-fila { align-items: center; gap: 10px; }
 .u-vel-nombre { min-width: 110px; }
+/* lecciones con personajes */
+.l-quien { display: flex; gap: 10px; align-items: center; margin: 4px 0 10px; }
+.l-quien-foto { width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: var(--panel2); flex: none; }
+.l-quien-foto svg { width: 100%; height: 100%; display: block; }
+.l-quien-txt { min-width: 0; }
+.l-quien-txt b { font-size: 14px; }
+.l-quien-frase { font-style: italic; color: var(--suave); }
+.l-quien.grande .l-quien-foto { width: 72px; height: 72px; }
+.l-quien.grande .l-quien-frase { font-size: 1.1em; color: var(--tinta); }
+.l-caso { background: #EADDBF; color: #3D3020; border: 0; }
+.l-caso .l-quien .l-quien-frase, .l-caso .l-quien .l-quien-txt b { color: #3D3020; }
+.l-caso-cab { font: 700 12px "Courier New", monospace; letter-spacing: 1px; color: #6E5A30; }
+.l-caso .boton { color: #3D3020; }
+.inicio-duarte h1 { margin: 0; }
+.l-quien-foto.mini { width: 32px; height: 32px; display: inline-block; vertical-align: middle; margin-right: 8px; }
+.orden-dia p { margin: 6px 0 10px; }

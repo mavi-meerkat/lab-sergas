@@ -179,6 +179,13 @@ function programarRefresco() {
 
 // ------------------------------------------------------------------ esqueleto
 const NAV = [["inicio", "🏠", "Inicio"], ["profesor", "🎓", "Profesor"], ["repaso", "🔁", "Repaso"], ["entrena", "🎮", "Entrena"], ["unidad", "🔎", "Unidad de Análisis"], ["examenes", "📝", "Simulacros"], ["validar", "🩺", "Por validar"], ["ajustes", "⚙", "Ajustes"]];
+// En modo personajes (lecciones con la Unidad de Análisis) algunas secciones cambian de nombre.
+const NAV_PJ = { inicio: "Comisaría", profesor: "Sala de briefing", repaso: "Revisión de casos", examenes: "Juicio simulado" };
+const pj = () => !A.p || A.p.get("modo_personajes", true) !== false;
+A.pintarNav = () => {
+  for (const [k, , txt] of NAV) if (navBtns[k]) navBtns[k].querySelector(".nav-txt").textContent = pj() && NAV_PJ[k] ? NAV_PJ[k] : txt;
+  if (lblRacha && A.m) lblRacha.textContent = pj() ? `🔥 ${A.m.racha()} ${A.m.racha() === 1 ? "día" : "días"} de servicio` : `🔥 Racha: ${A.m.racha()} días`;
+};
 let navBtns = {}, lblRacha, lblDias, entFecha, lblPomo, bPomo, lblSync;
 
 function construir() {
@@ -222,7 +229,7 @@ window.addEventListener("offline", () => pintarSync());
 
 function marcarNav(clave) {
   for (const [k, b] of Object.entries(navBtns)) b.classList.toggle("activo", k === clave);
-  if (lblRacha) lblRacha.textContent = `🔥 Racha: ${A.m.racha()} días`;
+  A.pintarNav();
   A.actualizarNav();
 }
 
@@ -396,20 +403,32 @@ document.addEventListener("keydown", (e) => {
 });
 
 // ------------------------------------------------------------------ audios sin conexión
+// En modo personajes se guardan los audios de los personajes (audio/p/…); en clásico, los del profesor.
+async function listaAudios() {
+  if (A.p.get("modo_personajes", true) === false) return [...new Set(Object.values(A.c.audio).flatMap((g) => Object.values(g.a)))];
+  const { claveFrase } = await import("./u-voz.js");
+  const { CASOS, CIERRES, ENTRADAS, narradorDe } = await import("./l-guion.js");
+  const l = new Set(Object.values(A.c.audio).flatMap((g) => Object.values(g.b || {}).map(([, h]) => "p/" + h)));
+  for (const [lid, t] of Object.entries(CASOS)) l.add("p/" + await claveFrase(narradorDe(lid), t));
+  for (const [q, ts] of [...Object.entries(CIERRES), ...Object.entries(ENTRADAS)]) for (const t of ts) l.add("p/" + await claveFrase(q, t));
+  return [...l];
+}
 A.estadoAudios = async (lbl) => {
   try {
     const cache = await caches.open("audio-v1");
-    const n = (await cache.keys()).length;
-    const total = new Set(Object.values(A.c.audio).flatMap((g) => Object.values(g.a))).size;
+    const lista = await listaAudios();
+    const ya = new Set((await cache.keys()).map((r) => new URL(r.url).pathname.replace(/^.*\/audio\//, "").replace(".ogg", "")));
+    const n = lista.filter((h) => ya.has(h)).length;
+    const total = lista.length;
     lbl.textContent = `${n} de ${total} guardados en este dispositivo`;
   } catch { lbl.textContent = ""; }
 };
 A.descargarAudios = async (lbl, btn) => {
-  const hashes = [...new Set(Object.values(A.c.audio).flatMap((g) => Object.values(g.a)))];
   btn.disabled = true;
   try {
+    const hashes = await listaAudios();
     const cache = await caches.open("audio-v1");
-    const ya = new Set((await cache.keys()).map((r) => new URL(r.url).pathname.split("/").pop().replace(".ogg", "")));
+    const ya = new Set((await cache.keys()).map((r) => new URL(r.url).pathname.replace(/^.*\/audio\//, "").replace(".ogg", "")));
     const faltan = hashes.filter((h) => !ya.has(h));
     let hechos = hashes.length - faltan.length, errores = 0;
     const trabajador = async () => {

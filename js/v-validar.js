@@ -150,16 +150,18 @@ export function vistaAjustes(main) {
     segmentado(["Sí", "No"], p.get("preguntar_certeza", true) ? "Sí" : "No", (v) => p.set("preguntar_certeza", v === "Sí")));
   fila("Apariencia", "Claro u oscuro.",
     segmentado(["Claro", "Oscuro"], p.get("tema", "Light") === "Dark" ? "Oscuro" : "Claro", (v) => A.cambiarTema(v === "Oscuro" ? "Dark" : "Light")));
-  fila("Velocidad de la clase en audio", "Velocidad por defecto del modo clase.",
+  fila("Lecciones con personajes", "Cada módulo te lo explica un miembro de la Unidad de Análisis (Duarte, Carmen o Valeria), Marco avisa de las trampas e Iker cuenta los trucos. «Clásico» vuelve al profesor de siempre.",
+    segmentado(["Personajes", "Clásico"], p.get("modo_personajes", true) !== false ? "Personajes" : "Clásico", (v) => { p.set("modo_personajes", v === "Personajes"); A.pintarNav && A.pintarNav(); }));
+  fila("Velocidad de la clase en audio", "Velocidad del profesor en el modo clásico. En modo personajes cada uno tiene la suya (más abajo).",
     segmentado(["1×", "1,25×", "1,5×"], { 1: "1×", 1.25: "1,25×", 1.5: "1,5×" }[Number(p.get("clase_vel", 1.25))] || "1×",
       (v) => p.set("clase_vel", { "1×": 1, "1,25×": 1.25, "1,5×": 1.5 }[v])));
 
   main.append(tarjeta("fila-opcion", el("div.flex1", el("h3", "Voces de los personajes"),
-    el("p.suave.peq", "Velocidad de cada personaje de la Unidad de Análisis."), panelVelocidades())));
+    el("p.suave.peq", "Velocidad de cada personaje, en el juego y en las lecciones."), panelVelocidades())));
 
   const estAudio = el("span.suave.peq", "");
   const bAudio = boton("Descargar audios", () => A.descargarAudios(estAudio, bAudio), "secundario");
-  fila("Audios sin conexión", "Guarda en este dispositivo las 58 clases en audio (unos 125 MB) para escucharlas sin internet. Si no, se descargan al escucharlas.", bAudio, estAudio);
+  fila("Audios sin conexión", "Guarda en este dispositivo las 58 clases en audio del modo que tengas puesto (unos 130-150 MB) para escucharlas sin internet. Si no, se descargan al escucharlas.", bAudio, estAudio);
   A.estadoAudios && A.estadoAudios(estAudio);
 
   fila("Cuenta", `Sesión iniciada como ${A.usuario || "?"}. El progreso se sincroniza entre el ordenador y la tablet.`,
