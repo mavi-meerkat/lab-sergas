@@ -2,24 +2,26 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Mi Entreno</title>
-<meta name="description" content="Entreno de fuerza y cardio adaptado a la fase del ciclo menstrual">
-<meta name="theme-color" content="#C2456B">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mi Entreno se ha mudado</title>
 <meta name="robots" content="noindex, nofollow">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Mi Entreno">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icons/icon-180.png">
-<link rel="stylesheet" href="css/app.css">
-<link rel="stylesheet" href="css/fig.css">
+<style>
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F6F2EE;color:#26232E;font-family:ui-rounded,-apple-system,system-ui,sans-serif;padding:24px;text-align:center}
+@media (prefers-color-scheme:dark){body{background:#141218;color:#F2EFF6}}
+main{max-width:380px}h1{font-size:26px;margin:0 0 10px}p{color:#6D6878;margin:0 0 20px;line-height:1.45}
+a{display:block;background:#C2456B;color:#fff;text-decoration:none;font-weight:750;border-radius:16px;padding:16px}
+</style>
 </head>
 <body>
-<div id="app"><div class="carga"><p>Cargando…</p></div></div>
-<noscript>Esta aplicación necesita JavaScript.</noscript>
-<script type="module" src="js/app.js"></script>
+<main>
+  <h1>Mi Entreno se ha mudado</h1>
+  <p>La app ahora vive en una dirección nueva. Ábrela ahí y añádela a la pantalla de inicio. Puedes borrar este icono.</p>
+  <a href="https://mavi-meerkat.github.io/eska/">Ir a la nueva app</a>
+</main>
+<script>
+// Limpia la versión antigua instalada en esta dirección
+if ("serviceWorker" in navigator) navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => { if (r.scope.includes("/gym/")) r.unregister(); }));
+if (window.caches) caches.keys().then((ks) => ks.filter((k) => k.startsWith("gym-")).forEach((k) => caches.delete(k)));
+</script>
 </body>
 </html>
