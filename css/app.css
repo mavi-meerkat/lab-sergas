@@ -458,3 +458,21 @@ h3.modulo { margin: 18px 0 6px; font-size: 17px; }
 .inicio-duarte h1 { margin: 0; }
 .l-quien-foto.mini { width: 32px; height: 32px; display: inline-block; vertical-align: middle; margin-right: 8px; }
 .orden-dia p { margin: 6px 0 10px; }
+/* buscador del temario */
+.busca-boton { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--borde); background: var(--panel); color: var(--tinta); font: 600 14px var(--fuente); cursor: pointer; margin-right: 8px; }
+.busca-boton:hover { border-color: var(--acento); }
+.busca-boton .l-quien-foto.mini { margin: 0; width: 26px; height: 26px; }
+.busca-modal { display: flex; flex-direction: column; gap: 10px; }
+.busca-entrada { width: 100%; font-size: 18px; padding: 12px 14px; }
+.busca-filtros { display: flex; flex-wrap: wrap; gap: 6px; }
+.busca-filtro { padding: 5px 12px; border-radius: 999px; border: 1px solid var(--borde); background: var(--panel); color: var(--tinta); font: 600 13px var(--fuente); cursor: pointer; }
+.busca-filtro.activo { background: var(--acento); border-color: var(--acento); color: #fff; }
+.busca-lista { display: grid; gap: 10px; max-height: 62vh; overflow-y: auto; padding-right: 4px; }
+.busca-res { background: var(--panel); border: 1px solid var(--borde); border-radius: 12px; padding: 12px 14px; display: grid; gap: 4px; }
+.busca-cab { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.busca-tipo { font: 700 11px var(--fuente); letter-spacing: .06em; color: var(--suave); }
+.busca-cab .l-quien-foto.mini { margin: 0 0 0 auto; }
+.busca-frag { line-height: 1.55; }
+.busca-frag mark { background: #FFE08A; color: #1E2328; border-radius: 3px; padding: 0 2px; }
+.busca-valeria { margin: 0; }
+@media (max-width: 700px) { .busca-boton-txt { display: none; } }

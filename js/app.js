@@ -1,4 +1,5 @@
 // Arranque de LAB SERGAS (web): sesión, contenido cifrado, sincronización y navegación.
+import { botonBuscador, abrirBuscador } from "./buscador.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword,
@@ -184,8 +185,10 @@ const NAV_PJ = { inicio: "Comisaría", profesor: "Sala de briefing", repaso: "Re
 const pj = () => !A.p || A.p.get("modo_personajes", true) !== false;
 A.pintarNav = () => {
   for (const [k, , txt] of NAV) if (navBtns[k]) navBtns[k].querySelector(".nav-txt").textContent = pj() && NAV_PJ[k] ? NAV_PJ[k] : txt;
+  if (bBusca) bBusca.pintar();
   if (lblRacha && A.m) lblRacha.textContent = pj() ? `🔥 ${A.m.racha()} ${A.m.racha() === 1 ? "día" : "días"} de servicio` : `🔥 Racha: ${A.m.racha()} días`;
 };
+let bBusca = null;
 let navBtns = {}, lblRacha, lblDias, entFecha, lblPomo, bPomo, lblSync;
 
 function construir() {
@@ -200,6 +203,7 @@ function construir() {
   const top = el("header.barra-top",
     el("div.marca", el("span", "🧪"), el("b", "LAB SERGAS")), lblSync,
     el("span.flex1"),
+    (bBusca = botonBuscador()),
     el("div.caja-fecha", el("b.c-aviso.peq", "📅 Examen"), entFecha, lblDias),
     el("div.caja-pomo", lblPomo, bPomo, boton("↺", pomoReset, "secundario cuadrado")));
   const nav = el("nav.lateral");
@@ -397,7 +401,10 @@ function quitarOverlay() { if (overlay) { overlay.remove(); overlay = null; } }
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && cerrarModalSuperior()) return;
   const t = e.target;
-  if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+  const escribiendo = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
+  // buscador: «/» o Ctrl+K desde cualquier pantalla
+  if (A.c && !hayModal() && ((e.key === "/" && !escribiendo) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k"))) { e.preventDefault(); abrirBuscador(); return; }
+  if (escribiendo) return;
   if (e.ctrlKey || e.metaKey || e.altKey || hayModal() || overlay) return;
   if (A.vista && A.vista.teclas && A.vista.teclas(e)) e.preventDefault();
 });

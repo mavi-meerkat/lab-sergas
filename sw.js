@@ -1,12 +1,12 @@
 // Service worker de LAB SERGAS: la app funciona sin conexión.
-const VERSION = "v12";
+const VERSION = "v13";
 const SHELL = "shell-" + VERSION;
 const AUDIO = "audio-v1";
 const FB = "https://www.gstatic.com/firebasejs/10.12.2/";
 const PRECACHE = [
   "./", "index.html", "manifest.webmanifest", "css/app.css", "icons/icon.svg", "icons/icon-192.png",
   "js/app.js", "js/ctx.js", "js/ui.js", "js/util.js", "js/content.js", "js/store.js", "js/engine.js", "js/sim.js",
-  "js/pregunta.js", "js/v-inicio.js", "js/v-leccion.js", "js/v-repaso.js", "js/v-examenes.js", "js/v-validar.js", "js/v-entrena.js", "js/imagenes.js", "js/cifras.js", "js/u-unidad.js", "js/u-arte.js", "js/u-guion.js", "js/u-voz.js", "js/velocidades.js", "js/l-guion.js",
+  "js/pregunta.js", "js/v-inicio.js", "js/v-leccion.js", "js/v-repaso.js", "js/v-examenes.js", "js/v-validar.js", "js/v-entrena.js", "js/imagenes.js", "js/cifras.js", "js/u-unidad.js", "js/u-arte.js", "js/u-guion.js", "js/u-voz.js", "js/velocidades.js", "js/l-guion.js", "js/buscador.js",
   "js/firebase-config.js",
   FB + "firebase-app.js", FB + "firebase-auth.js", FB + "firebase-firestore.js",
 ];
